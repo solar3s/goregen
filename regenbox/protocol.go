@@ -1,5 +1,8 @@
 package regenbox
 
+// see https://github.com/solar3s/regenbox/
+// firmware/simple_api.ino
+
 const (
 	BoxReady byte = 0xff
 )
@@ -21,12 +24,12 @@ const (
 )
 
 const (
-	PinChargeOff = 0x30 | iota
+	PinChargeOff byte = 0x30 | iota
 	PinChargeOn
 )
 
 const (
-	ModeIdle = 0x50 | iota
+	ModeIdle byte = 0x50 | iota
 	ModeCharge
 	ModeDischarge
 )
