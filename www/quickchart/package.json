@@ -1,0 +1,9 @@
+{
+  "name": "quickchart",
+  "version": "0.1.0",
+  "author": "rkj",
+  "license": "MIT",
+  "dependencies": {
+    "chartist": "^0.10.1"
+  }
+}

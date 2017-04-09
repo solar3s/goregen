@@ -1,0 +1,21 @@
+* {
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  position: relative;
+  width: 100%;
+  height: 100%;
+}
+
+#chart {
+  position: absolute;
+  margin: auto;
+  width: 600px;
+  height: 600px;
+}
+
+.ct-series-a .ct-line {
+  stroke-width: 1px;
+}
