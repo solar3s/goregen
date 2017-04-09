@@ -2,33 +2,32 @@ package main
 
 import (
 	"flag"
-	"github.com/tarm/serial"
+	"github.com/solar3s/goregen/regenbox"
+	"go.bug.st/serial.v1"
 	"log"
 	"time"
-	"github.com/solar3s/regenbox/goregen/regenbox"
 )
 
 var rbox *regenbox.RegenBox
 var err error
 
 var (
-	device = flag.String("dev", "/dev/ttyUSB1", "path to serial port")
+	device = flag.String("dev", "", "path to serial port, if empty it will be searched automatically")
 )
 
 func init() {
 	flag.Parse()
-	dev, err := serial.OpenPort(&serial.Config{
-		Name:        *device,
-		Baud:        9600,
-		ReadTimeout: time.Millisecond * 500,
-	})
-	if err != nil {
-		log.Fatal(err)
+	var conn regenbox.Connection = nil
+	if *device != "" {
+		port, err := serial.Open(*device, regenbox.DefaultSerialMode)
+		if err != nil {
+			log.Fatal("error opening serial port:", err)
+		}
+		conn = regenbox.SerialConnection{Port: port}
 	}
-	rbox = &regenbox.RegenBox{
-		Conn: regenbox.SerialConnection{
-			Port: dev,
-		},
+	rbox, err = regenbox.NewRegenBox(conn)
+	if err != nil {
+		log.Fatal("error initializing regenbox connection:", err)
 	}
 }
 
