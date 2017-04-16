@@ -31,18 +31,35 @@ func init() {
 	}
 }
 
-// ReadVoltage on A0 pin
+// forever cycle
 func main() {
+	log.Println("enabling discharge")
+	err := rbox.SetDischarge()
+	if err != nil {
+		log.Fatal("couldn't set dischargecharge mode", err)
+	}
+
 	for {
 		time.Sleep(time.Second)
-		r0, err := rbox.LedToggle()
+		rbox.LedToggle()
+		rV, err := rbox.ReadVoltage()
 		if err != nil {
-			log.Println(err)
+			log.Println("err ReadRoltage:", err)
 		}
-		r1, err := rbox.ReadVoltage()
-		if err != nil {
-			log.Println(err)
+
+		log.Printf("Voltage: %vmV", rV)
+		if rV < 900 && rbox.ChargeState() != regenbox.Charging {
+			log.Printf("current state: %v. enabling charge", rbox.ChargeState())
+			err := rbox.SetCharge()
+			if err != nil {
+				log.Println("rbox.SetCharge error:", err)
+			}
+		} else if rV >= 1400 && rbox.ChargeState() != regenbox.Discharging {
+			log.Printf("current state: %v. enabling discharge", rbox.ChargeState())
+			err := rbox.SetDischarge()
+			if err != nil {
+				log.Println("rbox.SetDischarge error:", err)
+			}
 		}
-		log.Println("led:", r0, " - A0:", r1)
 	}
 }
