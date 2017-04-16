@@ -3,12 +3,24 @@ package regenbox
 import (
 	"errors"
 	"fmt"
+	"strconv"
+	"time"
 )
 
 var ErrEmptyRead error = errors.New("message was empty")
 
+type ChargeState int
+
+const (
+	//go:generate stringer -type=ChargeState
+	Idle        ChargeState = ChargeState(ModeIdle)
+	Charging    ChargeState = ChargeState(ModeCharge)
+	Discharging ChargeState = ChargeState(ModeDischarge)
+)
+
 type RegenBox struct {
-	Conn Connection
+	Conn  Connection
+	state ChargeState
 }
 
 func NewRegenBox(conn Connection) (rb *RegenBox, err error) {
@@ -19,9 +31,8 @@ func NewRegenBox(conn Connection) (rb *RegenBox, err error) {
 		}
 	}
 
-	rb = &RegenBox{conn}
-	buf := make([]byte, 1)
-	_, err = rb.Conn.Read(buf)
+	rb = &RegenBox{conn, Idle}
+	buf, err := rb.read()
 	if err != nil {
 		return rb, err
 	} else if buf[0] != BoxReady {
@@ -42,26 +53,69 @@ func (rb *RegenBox) LedToggle() (bool, error) {
 
 }
 
-func (rb *RegenBox) ReadVoltage() (string, error) {
-	res, err := rb.talk(ReadVoltage)
+// ReadAnalog retreives value at A0 pin, it doesn't take
+// account for CAN conversion. When in doubt, prefer ReadVoltage.
+func (rb *RegenBox) ReadAnalog() (int, error) {
+	res, err := rb.talk(ReadA0)
 	if err != nil {
-		return "", err
+		return -1, err
 	}
-	return string(res), err
+	return strconv.Atoi(string(res))
 }
 
-// talk is generic 1-byte send and read []byte answer
+// ReadVoltage retreives voltage from battery on A0 in mV.
+func (rb *RegenBox) ReadVoltage() (int, error) {
+	res, err := rb.talk(ReadVoltage)
+	if err != nil {
+		return -1, err
+	}
+	return strconv.Atoi(string(res))
+}
+
+func (rb *RegenBox) SetCharge() error {
+	return rb.SetChargeMode(ModeCharge)
+}
+
+func (rb *RegenBox) SetDischarge() error {
+	return rb.SetChargeMode(ModeDischarge)
+}
+
+func (rb *RegenBox) SetIdle() error {
+	return rb.SetChargeMode(ModeIdle)
+}
+
+func (rb *RegenBox) ChargeState() ChargeState {
+	return rb.state
+}
+
+// SetDischarge enables discharge mode
+func (rb *RegenBox) SetChargeMode(mode byte) error {
+	res, err := rb.talk(mode)
+	if err != nil {
+		return err
+	}
+	if len(res) < 1 {
+		return errors.New("no response from regenbox")
+	}
+	// no error, save state to box only now.
+	rb.state = ChargeState(mode)
+	return nil
+}
+
+// talk is generic 1-byte send and read []byte answer.
+// All higher level function should use talk as a wrapper.
 func (rb *RegenBox) talk(b byte) ([]byte, error) {
+	time.Sleep(time.Millisecond * 50) // small tempo
 	i, err := rb.Conn.Write([]byte{b})
 	if err != nil || i != 1 {
 		return nil, err
 	}
-	return rb.readTrim()
+	return rb.read()
 }
 
-// readTrim reads all it can get from rb.Conn, then removes CRLF
-func (rb *RegenBox) readTrim() ([]byte, error) {
-	buf := make([]byte, 256)
+// Read reads from rb.Conn then removes CRLF
+func (rb *RegenBox) read() (buf []byte, err error) {
+	buf = make([]byte, 256)
 	i, err := rb.Conn.Read(buf)
 	if err != nil {
 		return buf[:i], err
