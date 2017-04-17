@@ -26,6 +26,11 @@ type RegenboxData struct {
 }
 
 func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	if r.RequestURI != "/" {
+		http.Redirect(w, r, "/", http.StatusFound)
+		return
+	}
+
 	name := "html/home.html"
 	asset, err := Asset(name)
 	if err != nil {
@@ -76,6 +81,20 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 type CustomResponseWriter struct {
 	http.ResponseWriter
 	Status int
+}
+
+func (w *CustomResponseWriter) Header() http.Header {
+	return w.ResponseWriter.Header()
+}
+
+func (w *CustomResponseWriter) Write(data []byte) (int, error) {
+	return w.ResponseWriter.Write(data)
+}
+
+func (w *CustomResponseWriter) WriteHeader(statusCode int) {
+	// set w.Status then forward to inner ResposeWriter
+	w.Status = statusCode
+	w.ResponseWriter.WriteHeader(statusCode)
 }
 
 func WrapCustomRW(wr http.ResponseWriter) http.ResponseWriter {
