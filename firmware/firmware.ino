@@ -1,29 +1,48 @@
-/*-----------------------------------------------------
+/*----------------------------------------------------------------------
   Provides direct pin access via simple serial protocol
 
-  1byte input:
-    0x00 read A0 pin
-    0x01 fancy A0 reads and compute voltage
-    0x10 led off
-    0x11 led on
-    0x30 pin discharge off
-    0x31 pin discharge on
-    0x40 pin charge off
-    0x41 pin charge on
+  Takes a 1byte instruction input, output can be:
+    - On toggle instructions: write 1 single boolean byte for new state
+        (LED_TOGGLE)
+    - On other pin instructions: write 1 single 0 byte (always success)
+        (LED_0/1, PIN_DISCHARGE_0/1, PIN_CHARGE_0/1, MODE_*)
+    - On uint readings: write ascii repr of value + CRLF
+        (READ_A0, READ_V)
+-----------------------------------------------------------------------*/
 
-    0x50 idle mode
-    0x51 charge mode
-    0x52 discharge mode
 
-  output: depends
+// -------------------------------------------
+// Input instructions (waiting on serial read)
+//
+// READ_* writes string response
+#define READ_A0  0x00 // read A0 pin
+#define READ_V   0x01 // fancy A0 reads and compute voltage
 
------------------------------------------------------*/
+// LED_TOGGLE writes boolean response (led state)
+#define LED_TOGGLE 0x12 // led toggle
 
+// all other commands return a single null byte
+#define LED_0           0x10 // led off
+#define LED_1           0x11 // led on
+#define PIN_DISCHARGE_0 0x30 // pin discharge off
+#define PIN_DISCHARGE_1 0x31 // pin discharge on
+#define PIN_CHARGE_0    0x40 // pin charge off
+#define PIN_CHARGE_1    0x41 // pin charge on
+
+#define MODE_IDLE       0x50 // enable idle mode
+#define MODE_CHARGE     0x51 // enable charge mode
+#define MODE_DISCHARGE  0x52 // enable discharge mode
+
+// default return values
+#define ERR           100
+#define OK            0
 #define BOX_READY     0xFF     // send when box is ready
 
-#define PIN_CHARGE    4        // output pin (charge)
-#define PIN_DISCHARGE 3        // output pin (discharge)
-#define PIN_LED       13       // output pin (arduino led)
+// ---------------------------
+// Internal address and config
+#define PIN_CHARGE    4        // output pin address (charge)
+#define PIN_DISCHARGE 3        // output pin address (discharge)
+#define PIN_LED       13       // output pin address (arduino led)
 #define PIN_ANALOG    A0       // analog pin on battery-0 voltage
 
 // config parameters for getVoltage()
@@ -31,10 +50,6 @@
 #define CAN_BITSIZE   1023     // précision du CAN
 #define NB_ANALOG_RD  10       // how many analog read to measure average on
 
-// some random errors
-#define ERR           100
-
-#define INTERVAL      3600000  //nombre de seconde dans une heure
 
 void setCharge(boolean b) {
   digitalWrite(PIN_CHARGE, !b);
@@ -126,8 +141,6 @@ void setup() {
 
 
 // simple talk protocol
-//   - input: 1 byte for instruction
-//   - output: string ending with CRLF (10, 13)
 void loop() {
   if (!Serial.available()) {
     return;
@@ -135,39 +148,39 @@ void loop() {
 
   byte in = Serial.read();
   switch (in) {
-    case 0x00:  // read A0 pin
+    case READ_A0:
       sendUint(getAnalog()); break;
-    case 0x01:  // fancy A0 reads and compute voltage
+    case READ_V:
       sendUint(getVoltage()); break;
 
-    case 0x10:  // led off
+    case LED_0:
       setLed(0); sendOk(); break;
-    case 0x11:  // led on
+    case LED_1:
       setLed(1); sendOk(); break;
-    case 0x12:  // led toggle
+    case LED_TOGGLE:
       sendBool(toggleLed()); break;
 
-    case 0x30:  // pin discharge off
+    case PIN_DISCHARGE_0:
       setDischarge(0); sendOk(); break;
-    case 0x31:  // pin discharge on
+    case PIN_DISCHARGE_1:
       setDischarge(1); sendOk(); break;
 
-    case 0x40:  // pin charge off
+    case PIN_CHARGE_0:
       setCharge(0); sendOk(); break;
-    case 0x41:  // pin charge on
+    case PIN_CHARGE_1:
       setCharge(1); sendOk(); break;
 
-    case 0x50: // idle mode
+    case MODE_IDLE:
       setDischarge(0);
       setCharge(0);
       sendOk();
       break;
-    case 0x51: // charge mode
+    case MODE_CHARGE:
       setDischarge(0);
       setCharge(1);
       sendOk();
       break;
-    case 0x52: // discharge mode
+    case MODE_DISCHARGE:
       setCharge(0);
       setDischarge(1);
       sendOk();
