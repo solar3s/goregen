@@ -3,6 +3,7 @@ package main
 import (
 	"flag"
 	"github.com/solar3s/goregen/regenbox"
+	"github.com/solar3s/goregen/www"
 	"go.bug.st/serial.v1"
 	"log"
 	"time"
@@ -31,16 +32,15 @@ func init() {
 	}
 }
 
-// forever cycle
-func main() {
+func dumbCycle() {
 	log.Println("enabling discharge")
 	err := rbox.SetDischarge()
 	if err != nil {
-		log.Fatal("couldn't set dischargecharge mode", err)
+		log.Println("rbox.SetDischarge error:", err)
 	}
 
 	for {
-		time.Sleep(time.Second)
+		time.Sleep(time.Minute)
 		rbox.LedToggle()
 		rV, err := rbox.ReadVoltage()
 		if err != nil {
@@ -61,5 +61,18 @@ func main() {
 				log.Println("rbox.SetDischarge error:", err)
 			}
 		}
+	}
+}
+
+func main() {
+	go dumbCycle() // run our dumb cycle in background
+
+	s := www.Server{
+		ListenAddr: "localhost:3636",
+		Regenbox:   rbox,
+	}
+	err := s.Start()
+	if err != nil {
+		log.Fatal(err)
 	}
 }
