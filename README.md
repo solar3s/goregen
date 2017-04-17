@@ -3,7 +3,8 @@ goregen
 
 Golang implementation for controlling regenbox
 
-Using simple_api.ino firmware/protocol from https://github.com/solar3s/regenbox
+Install [firmware/firmware.ino](https://github.com/solar3s/goregen/blob/master/firmware/firmware.ino)
+on arduino & run code
 
 
 Quickstart
