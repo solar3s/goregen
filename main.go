@@ -39,6 +39,7 @@ func dumbCycle() {
 		log.Println("rbox.SetDischarge error:", err)
 	}
 
+	up := false
 	for {
 		time.Sleep(time.Minute)
 		rbox.LedToggle()
@@ -48,14 +49,18 @@ func dumbCycle() {
 		}
 
 		log.Printf("Voltage: %vmV", rV)
-		if rV < 900 && rbox.ChargeState() != regenbox.Charging {
-			log.Printf("current state: %v. enabling charge", rbox.ChargeState())
+		if rV < 900 {
+			up = true
+		} else if rV >= 1400 {
+			up = false
+		}
+
+		if up {
 			err := rbox.SetCharge()
 			if err != nil {
 				log.Println("rbox.SetCharge error:", err)
 			}
-		} else if rV >= 1400 && rbox.ChargeState() != regenbox.Discharging {
-			log.Printf("current state: %v. enabling discharge", rbox.ChargeState())
+		} else {
 			err := rbox.SetDischarge()
 			if err != nil {
 				log.Println("rbox.SetDischarge error:", err)
