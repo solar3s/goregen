@@ -77,46 +77,8 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-// CustomResponseWriter allows to store current status code of ResponseWriter.
-type CustomResponseWriter struct {
-	http.ResponseWriter
-	Status int
-}
-
-func (w *CustomResponseWriter) Header() http.Header {
-	return w.ResponseWriter.Header()
-}
-
-func (w *CustomResponseWriter) Write(data []byte) (int, error) {
-	return w.ResponseWriter.Write(data)
-}
-
-func (w *CustomResponseWriter) WriteHeader(statusCode int) {
-	// set w.Status then forward to inner ResposeWriter
-	w.Status = statusCode
-	w.ResponseWriter.WriteHeader(statusCode)
-}
-
-func WrapCustomRW(wr http.ResponseWriter) http.ResponseWriter {
-	if _, ok := wr.(*CustomResponseWriter); !ok {
-		return &CustomResponseWriter{
-			ResponseWriter: wr,
-			Status:         http.StatusOK, // defaults to ok, some servers might not call wr.WriteHeader at all
-		}
-	}
-	return wr
-}
-
-// LogHttp calls inner handler then logs what happened with http
-func (s *Server) LogHttp(w http.ResponseWriter, r *http.Request) {
-	w = WrapCustomRW(w)
-	s.ServeHTTP(w, r)
-	log.Printf("%s-regenbox> (%d) @%s: %s - agent:%s",
-		r.Host, w.(*CustomResponseWriter).Status, r.Header.Get("X-FORWARDED-FOR"), r.RequestURI, r.Header.Get("USER-AGENT"))
-}
-
 func (s *Server) Start() error {
-	http.HandleFunc("/", s.LogHttp)
+	http.Handle("/", Logger(s, "home"))
 	log.Printf("Listening on %s...", s.ListenAddr)
 	if err := http.ListenAndServe(s.ListenAddr, nil); err != nil {
 		return err
