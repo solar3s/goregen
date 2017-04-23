@@ -30,6 +30,13 @@ const (
 	NilBox          State = State(iota)
 )
 
+type Snapshot struct {
+	Time    time.Time
+	Voltage int
+	Charge  ChargeState
+	State   State
+}
+
 type RegenBox struct {
 	Conn        Connection
 	chargeState ChargeState
@@ -50,9 +57,22 @@ func NewRegenBox(conn Connection) (rb *RegenBox, err error) {
 		return rb, err
 	} else if buf[0] != BoxReady {
 		rb.state = UnexpectedError
-		return rb, fmt.Errorf("unexpected ready byte %s vs. %d", buf[0], BoxReady)
+		return rb, fmt.Errorf("unexpected ready byte %d vs. %d", buf[0], BoxReady)
 	}
 	return rb, nil
+}
+
+func (rb *RegenBox) Snapshot() Snapshot {
+	s := Snapshot{
+		Time: time.Now(),
+		State: rb.State,
+	}
+	if s.State == NilBox {
+		return s
+	}
+	s.Voltage, _ = rb.ReadVoltage()
+	s.Charge = rb.ChargeState()
+	return s
 }
 
 func (rb *RegenBox) LedToggle() (bool, error) {
