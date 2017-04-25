@@ -221,7 +221,7 @@ func (rb *RegenBox) Snapshot() Snapshot {
 	s.Voltage, err = rb.ReadVoltage()
 	if err != nil {
 		s.State = rb.state // update state, it should contain an error
-		log.Printf("(state %s) in snapshot, rb.ReadVoltage: %s", s.State, err)
+		log.Printf("in rb.ReadVoltage: %s (state: %s)", err, s.State)
 	}
 	s.ChargeState = rb.ChargeState()
 	return s
@@ -291,7 +291,7 @@ func (rb *RegenBox) State() State {
 	return rb.state
 }
 
-// SetDischarge enables discharge mode
+// SetChargeMode sends mode instruction to regenbox.
 func (rb *RegenBox) SetChargeMode(mode byte) error {
 	res, err := rb.talk(mode)
 	if err != nil {
@@ -317,7 +317,7 @@ func (rb *RegenBox) talk(b byte) ([]byte, error) {
 	return rb.read()
 }
 
-// Read reads from rb.Conn then removes CRLF
+// read reads from rb.Conn then returnes CRLF-trimmed response
 func (rb *RegenBox) read() (buf []byte, err error) {
 	buf = make([]byte, 256)
 	i, err := rb.Conn.Read(buf)
