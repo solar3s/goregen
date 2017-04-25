@@ -6,7 +6,7 @@
         (LED_TOGGLE)
     - On other pin instructions: write 1 single 0 byte (always success)
         (LED_0/1, PIN_DISCHARGE_0/1, PIN_CHARGE_0/1, MODE_*)
-    - On uint readings: write ascii repr of value + CRLF
+    - On uint readings: write ascii repr of value
         (READ_A0, READ_V)
 -----------------------------------------------------------------------*/
 
@@ -105,7 +105,7 @@ boolean sendError() {
 
 // uint response
 boolean sendUint(unsigned long v) {
-  if (Serial.println(v) <= 0) {
+  if (Serial.print(v) <= 0) {
     return false;
   }
   return true;
