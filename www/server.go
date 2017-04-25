@@ -53,7 +53,7 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	if s.Regenbox == nil {
 		log.Println("attempting to (re)connect to regenbox...")
-		s.Regenbox, err = regenbox.NewRegenBox(nil)
+		s.Regenbox, err = regenbox.NewRegenBox(nil, nil)
 		if err != nil {
 			log.Println("couldn't connect to regenbox -", err)
 			tplData.State = fmt.Sprintf("couldn't connect to regenbox - %s", err)

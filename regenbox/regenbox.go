@@ -3,7 +3,9 @@ package regenbox
 import (
 	"errors"
 	"fmt"
+	"log"
 	"strconv"
+	"sync"
 	"time"
 )
 
@@ -30,28 +32,71 @@ const (
 	NilBox          State = State(iota)
 )
 
+//go:generate stringer -type=Mode
+type Mode int
+
+const (
+	Manual        Mode = Mode(iota)
+	DischargeOnly Mode = Mode(iota) // Discharge until BottomVoltage is reached, then idle
+	ChargeOnly    Mode = Mode(iota) // Charge until TopVoltage is reached, then idle
+	AutoRun       Mode = Mode(iota) // Do cycles up to NbCycles between Bottom & TopValues, then idle
+)
+
 type Snapshot struct {
-	Time    time.Time
-	Voltage int
-	Charge  ChargeState
-	State   State
+	Time        time.Time
+	Voltage     int
+	ChargeState ChargeState
+	State       State
+}
+
+type Config struct {
+	OhmValue      int           // Value of charge resstance in ohm, usually from 10 to 30ohm
+	Mode          Mode          // Auto-mode lets the box do charge cycles using the following config values
+	NbHalfCycles  int           // In auto-mode: number of half-cycles to do before halting auto-mode
+	UpDuration    time.Duration // In auto-mode: maximum time for an up-cycle before taking action
+	DownDuration  time.Duration // In auto-mode: maximum time for a down-cycle before taking action
+	TopVoltage    int           // In auto-mode: target top voltage before switching cycle
+	BottomVoltage int           // In auto-mode: target bottom voltage before switching cycle
+	IntervalSec   time.Duration // In auto-mode: sleep interval in second between each poll
 }
 
 type RegenBox struct {
 	Conn        Connection
+	config      *Config
 	chargeState ChargeState
 	state       State
+	stop        chan bool
+	wg          sync.WaitGroup
+
+	measures []Snapshot
 }
 
-func NewRegenBox(conn Connection) (rb *RegenBox, err error) {
+func NewConfig() *Config {
+	return &Config{
+		OhmValue: 20, Mode: AutoRun, NbHalfCycles: 0,
+		UpDuration: time.Hour * 12, DownDuration: time.Hour * 12,
+		TopVoltage: 1450, BottomVoltage: 850,
+		IntervalSec: time.Minute,
+	}
+}
+
+func NewRegenBox(conn Connection, cfg *Config) (rb *RegenBox, err error) {
 	if conn == nil {
 		conn, err = AutoConnectSerial(nil)
 		if err != nil {
 			return nil, err
 		}
 	}
+	if cfg == nil {
+		cfg = NewConfig()
+	}
 
-	rb = &RegenBox{conn, Idle, Connected}
+	rb = &RegenBox{
+		Conn:        conn,
+		config:      cfg,
+		chargeState: Idle,
+		state:       Connected,
+	}
 	buf, err := rb.read()
 	if err != nil {
 		return rb, err
@@ -62,17 +107,134 @@ func NewRegenBox(conn Connection) (rb *RegenBox, err error) {
 	return rb, nil
 }
 
+// AutoRun starts an auto-cycle routine. To stop it, call StopAutoRun().
+func (rb *RegenBox) AutoRun() {
+	rb.stop = make(chan bool)
+	rb.wg.Add(1)
+	go func() {
+		defer func() {
+			rb.stop = nil // avoid closing of closed chan
+			rb.wg.Done()
+
+			log.Println("AutoRun is out, setting idle mode")
+			err := rb.SetIdle()
+			if err != nil {
+				log.Println("in SetIdle():", err)
+			}
+		}()
+
+		var sn Snapshot
+		var halfCycles int
+		var t0 = time.Now()
+		for {
+			select {
+			case <-rb.stop:
+				return
+			case <-time.After(rb.config.IntervalSec):
+			}
+
+			// force charge state, can't hurt
+			err := rb.SetChargeMode(byte(rb.chargeState))
+			if err != nil {
+				log.Println("in rb.SetChargeMode:", err)
+			}
+
+			sn = rb.Snapshot()
+			log.Println(sn)
+			rb.measures = append(rb.measures, sn)
+
+			if sn.State != Connected {
+				// need error-less state here
+				continue
+			}
+
+			if rb.chargeState == Discharging {
+				if sn.Voltage <= rb.config.BottomVoltage {
+					log.Printf("bottom value %dmV reached", rb.config.BottomVoltage)
+					if rb.config.Mode == DischargeOnly {
+						log.Println("finished discharging battery (discharge only)")
+						return
+					}
+					err := rb.SetCharge()
+					if err != nil {
+						log.Println("in rb.SetCharge:", err)
+					} else {
+						t0 = time.Now()
+						halfCycles++
+					}
+				} else if time.Since(t0) >= rb.config.DownDuration {
+					log.Printf("couldn't discharge battery to %dmV in %s, battery's dead or something's wrong",
+						rb.config.BottomVoltage, rb.config.DownDuration)
+					return
+				}
+			}
+
+			if rb.chargeState == Charging {
+				if sn.Voltage >= rb.config.TopVoltage {
+					log.Printf("top value %dmV reached", rb.config.TopVoltage)
+					if rb.config.Mode == ChargeOnly {
+						log.Println("finished charging battery (charge only)")
+						return
+					}
+					err := rb.SetDischarge()
+					if err != nil {
+						log.Println("in rb.SetDischarge:", err)
+					} else {
+						t0 = time.Now()
+						halfCycles++
+					}
+				} else if time.Since(t0) >= rb.config.UpDuration {
+					log.Printf("couldn't charge battery to %dmV in %s, battery's dead or something's wrong",
+						rb.config.TopVoltage, rb.config.UpDuration)
+					return
+				}
+			}
+
+			if rb.config.NbHalfCycles > 0 && halfCycles >= rb.config.NbHalfCycles {
+				log.Printf("reached target %d half-cycles", rb.config.NbHalfCycles)
+				return
+			}
+		}
+	}()
+}
+
+// StopAutoRun notifies AutoRun() to stop, and wait until it returns.
+func (rb *RegenBox) StopAutoRun() {
+	if rb.stop == nil {
+		return
+	}
+	log.Println("stopping AutoRun...")
+	close(rb.stop)
+	rb.wg.Wait()
+}
+
+// Snapshot retreives the state of rb at a given time.
 func (rb *RegenBox) Snapshot() Snapshot {
 	s := Snapshot{
-		Time: time.Now(),
-		State: rb.State,
+		Time:  time.Now(),
+		State: rb.State(),
 	}
 	if s.State == NilBox {
 		return s
 	}
-	s.Voltage, _ = rb.ReadVoltage()
-	s.Charge = rb.ChargeState()
+	var err error
+	s.Voltage, err = rb.ReadVoltage()
+	if err != nil {
+		s.State = rb.state // update state, it should contain an error
+		log.Printf("(state %s) in snapshot, rb.ReadVoltage: %s", s.State, err)
+	}
+	s.ChargeState = rb.ChargeState()
 	return s
+}
+
+func (rb *RegenBox) Config() Config {
+	return *rb.config
+}
+
+func (rb *RegenBox) SetConfig(cfg *Config) error {
+	rb.config = cfg
+	// todo check some values, take some actions, maybe
+	return nil
 }
 
 func (rb *RegenBox) LedToggle() (bool, error) {
