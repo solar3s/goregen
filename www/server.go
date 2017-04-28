@@ -78,7 +78,7 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) Start() error {
-	http.Handle("/", Logger(s, "home"))
+	http.Handle("/", Logger(s, "www"))
 	log.Printf("Listening on %s...", s.ListenAddr)
 	if err := http.ListenAndServe(s.ListenAddr, nil); err != nil {
 		return err
