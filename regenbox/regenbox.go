@@ -325,11 +325,11 @@ func (rb *RegenBox) read() (buf []byte, err error) {
 		rb.state = ReadError
 		return buf[:i], err
 	}
-	out := trimCRLF(buf[:i])
-	if i == 0 || len(out) == 0 {
+	response := buf[:i]
+	if i == 0 || len(response) == 0 {
 		rb.state = UnexpectedError
 		return []byte{}, ErrEmptyRead
 	}
 	rb.state = Connected
-	return out, nil
+	return response, nil
 }
