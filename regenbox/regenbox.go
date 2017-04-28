@@ -305,6 +305,12 @@ func (rb *RegenBox) SetChargeMode(mode byte) error {
 	return nil
 }
 
+// ping sends a ping to regenbox, returning error if something's wrong
+func (rb *RegenBox) ping() error {
+	_, err := rb.talk(Ping)
+	return err
+}
+
 // talk is generic 1-byte send and read []byte answer.
 // All higher level function should use talk as a wrapper.
 func (rb *RegenBox) talk(b byte) ([]byte, error) {

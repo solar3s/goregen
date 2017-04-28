@@ -1,10 +1,10 @@
 package regenbox
 
-// see https://github.com/solar3s/regenbox/
-// firmware/simple_api.ino
+// see firmware/firmware.ino
 
 const (
 	BoxReady byte = 0xff
+	Ping     byte = 0xa0
 )
 
 const (

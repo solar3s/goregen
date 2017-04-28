@@ -33,6 +33,8 @@
 #define MODE_CHARGE     0x51 // enable charge mode
 #define MODE_DISCHARGE  0x52 // enable discharge mode
 
+#define PING            0xA0 // just a ping
+
 // default return values
 #define OK              0x00
 #define ERR             0x10
@@ -183,6 +185,9 @@ void loop() {
     case MODE_DISCHARGE:
       setCharge(0);
       setDischarge(1);
+      sendOk();
+      break;
+    case PING:
       sendOk();
       break;
     default:
