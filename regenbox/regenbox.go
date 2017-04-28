@@ -61,7 +61,7 @@ type Config struct {
 }
 
 type RegenBox struct {
-	Conn        Connection
+	Conn        *SerialConnection
 	config      *Config
 	chargeState ChargeState
 	state       State
@@ -80,7 +80,7 @@ func NewConfig() *Config {
 	}
 }
 
-func NewRegenBox(conn Connection, cfg *Config) (rb *RegenBox, err error) {
+func NewRegenBox(conn *SerialConnection, cfg *Config) (rb *RegenBox, err error) {
 	if conn == nil {
 		conn, err = AutoConnectSerial(nil)
 		if err != nil {
