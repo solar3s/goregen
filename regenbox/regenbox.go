@@ -60,6 +60,7 @@ type Config struct {
 }
 
 type RegenBox struct {
+	sync.Mutex
 	Conn        *SerialConnection
 	config      *Config
 	chargeState ChargeState
@@ -252,7 +253,9 @@ func (rb *RegenBox) SetConfig(cfg *Config) error {
 }
 
 func (rb *RegenBox) LedToggle() (bool, error) {
+	rb.Lock()
 	res, err := rb.talk(LedToggle)
+	rb.Unlock()
 	if err != nil {
 		return false, err
 	}
@@ -266,7 +269,9 @@ func (rb *RegenBox) LedToggle() (bool, error) {
 // ReadAnalog retreives value at A0 pin, it doesn't take
 // account for CAN conversion. When in doubt, prefer ReadVoltage.
 func (rb *RegenBox) ReadAnalog() (int, error) {
+	rb.Lock()
 	res, err := rb.talk(ReadA0)
+	rb.Unlock()
 	if err != nil {
 		return -1, err
 	}
@@ -275,7 +280,9 @@ func (rb *RegenBox) ReadAnalog() (int, error) {
 
 // ReadVoltage retreives voltage from battery on A0 in mV.
 func (rb *RegenBox) ReadVoltage() (int, error) {
+	rb.Lock()
 	res, err := rb.talk(ReadVoltage)
+	rb.Unlock()
 	if err != nil {
 		return -1, err
 	}
@@ -307,7 +314,9 @@ func (rb *RegenBox) State() State {
 
 // SetChargeMode sends mode instruction to regenbox.
 func (rb *RegenBox) SetChargeMode(mode byte) error {
-	res, err := rb.talk(mode)
+	rb.Lock()
+	_, err := rb.talk(mode)
+	rb.Unlock()
 	if err != nil {
 		return err
 	}
