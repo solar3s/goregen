@@ -9,7 +9,7 @@ import (
 var ErrNoSerialPortFound = errors.New("didn't find any available serial port")
 
 var DefaultSerialConfig = &serial.Mode{
-	BaudRate: 9600,
+	BaudRate: 57600,
 	Parity:   serial.NoParity,
 	DataBits: 8,
 	StopBits: serial.OneStopBit,

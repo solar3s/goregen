@@ -121,7 +121,7 @@ boolean sendBool(boolean v) {
 }
 
 void setup() {
-  Serial.begin(9600);
+  Serial.begin(57600);
 
   pinMode(PIN_CHARGE, OUTPUT);
   pinMode(PIN_DISCHARGE, OUTPUT);
