@@ -38,7 +38,6 @@
 // default return values
 #define OK              0x00
 #define ERR             0x10
-#define BOX_READY       0xFF // send when box is ready
 
 // ---------------------------
 // Internal address and config
@@ -113,11 +112,6 @@ boolean sendUint(unsigned long v) {
   return true;
 }
 
-// sendReady sends special ready byte when setup() is over
-void sendReady() {
-  Serial.write(BOX_READY);
-}
-
 // boolean response
 boolean sendBool(boolean v) {
   if (Serial.write(v) <= 0) {
@@ -136,9 +130,6 @@ void setup() {
   setCharge(0);
   setDischarge(0);
   setLed(1);
-
-  // notify we're good to go on serial
-  sendReady();
 }
 
 

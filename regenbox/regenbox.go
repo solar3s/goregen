@@ -2,7 +2,6 @@ package regenbox
 
 import (
 	"errors"
-	"fmt"
 	"log"
 	"strconv"
 	"sync"
@@ -97,14 +96,28 @@ func NewRegenBox(conn *SerialConnection, cfg *Config) (rb *RegenBox, err error) 
 		chargeState: Idle,
 		state:       Connected,
 	}
-	buf, err := rb.read()
-	if err != nil {
-		return rb, err
-	} else if buf[0] != BoxReady {
-		rb.state = UnexpectedError
-		return rb, fmt.Errorf("unexpected ready byte %d vs. %d", buf[0], BoxReady)
+
+	_, err = rb.TestConnection()
+	return rb, err
+}
+
+const (
+	pingRetries  = 16
+	testConnPoll = time.Millisecond * 250
+)
+
+// TestConnection sends a ping every testConnPoll,
+// and returns on success or after pingRetries tries.
+func (rb *RegenBox) TestConnection() (_ time.Duration, err error) {
+	t0 := time.Now()
+	for i := 0; i < pingRetries; i++ {
+		time.Sleep(testConnPoll)
+		err = rb.ping()
+		if err == nil {
+			break
+		}
 	}
-	return rb, nil
+	return time.Since(t0), err
 }
 
 // AutoRun starts an auto-cycle routine. To stop it, call StopAutoRun().
@@ -297,9 +310,6 @@ func (rb *RegenBox) SetChargeMode(mode byte) error {
 	if err != nil {
 		return err
 	}
-	if len(res) < 1 {
-		return errors.New("no response from regenbox")
-	}
 	// no error, save state to box only now.
 	rb.chargeState = ChargeState(mode)
 	return nil
@@ -314,7 +324,6 @@ func (rb *RegenBox) ping() error {
 // talk is generic 1-byte send and read []byte answer.
 // All higher level function should use talk as a wrapper.
 func (rb *RegenBox) talk(b byte) ([]byte, error) {
-	time.Sleep(time.Millisecond * 50) // small tempo
 	i, err := rb.Conn.Write([]byte{b})
 	if err != nil || i != 1 {
 		rb.state = WriteError
