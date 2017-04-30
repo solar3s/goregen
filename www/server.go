@@ -69,8 +69,13 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) Start() error {
+	go func() {
+		watcher := regenbox.NewWatcher(s.Regenbox, regenbox.DefaultWatcherConfig)
+		watcher.WatchConn()
+	}()
+
 	http.Handle("/", Logger(s, "www"))
-	log.Printf("Listening on %s...", s.ListenAddr)
+	log.Printf("listening on %s...", s.ListenAddr)
 	if err := http.ListenAndServe(s.ListenAddr, nil); err != nil {
 		return err
 	}
