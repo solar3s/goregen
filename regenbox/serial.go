@@ -2,26 +2,23 @@ package regenbox
 
 import (
 	"errors"
-	"github.com/tarm/serial"
-	port_discover "go.bug.st/serial.v1"
+	"go.bug.st/serial.v1"
 	"log"
-	"time"
 )
 
 var ErrNoSerialPortFound = errors.New("didn't find any available serial port")
 
-var DefaultSerialConfig = &serial.Config{
-	Baud:        9600,
-	Parity:      serial.ParityNone,
-	Size:        serial.DefaultSize,
-	StopBits:    serial.Stop1,
-	ReadTimeout: time.Millisecond * 500,
+var DefaultSerialConfig = &serial.Mode{
+	BaudRate: 9600,
+	Parity:   serial.NoParity,
+	DataBits: 8,
+	StopBits: serial.OneStopBit,
 }
 
 type SerialConnection struct {
-	*serial.Port
+	serial.Port
 	path   string
-	config *serial.Config
+	config *serial.Mode
 }
 
 func (sc *SerialConnection) Read(b []byte) (int, error) {
@@ -42,40 +39,38 @@ func (sc *SerialConnection) Path() string {
 
 // FindPort tries to connect to first available serial port (platform independant hopefully).
 // If mode is nil, DefaultSerialMode is used.
-func FindPort(config *serial.Config) (*serial.Port, *serial.Config, error) {
-	ports, err := port_discover.GetPortsList()
+func FindPort(config *serial.Mode) (serial.Port, *serial.Mode, string, error) {
+	ports, err := serial.GetPortsList()
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, "", err
 	}
 	if config == nil {
 		config = DefaultSerialConfig
 	}
-	var port *serial.Port
+	var port serial.Port
 	for _, v := range ports {
-		config.Name = v
-		port, err = serial.OpenPort(config)
+		port, err = serial.Open(v, config)
 		if err == nil {
 			log.Printf("found serial port \"%s\"", v)
-			return port, config, nil
+			return port, config, v, nil
 		}
 	}
 	if err == nil {
-		return nil, config, ErrNoSerialPortFound
+		return nil, config, "", ErrNoSerialPortFound
 	}
-	return nil, config, err
+	return nil, config, "", err
 }
 
-func OpenPortName(name string) (port *serial.Port, config *serial.Config, err error) {
+func OpenPortName(name string) (port serial.Port, config *serial.Mode, err error) {
 	config = DefaultSerialConfig
-	config.Name = name
-	port, err = serial.OpenPort(config)
+	port, err = serial.Open(name, config)
 	return port, config, err
 }
 
-func NewSerial(port *serial.Port, config *serial.Config) *SerialConnection {
+func NewSerial(port serial.Port, config *serial.Mode, name string) *SerialConnection {
 	return &SerialConnection{
 		Port:   port,
-		path:   config.Name,
+		path:   name,
 		config: config,
 	}
 }
