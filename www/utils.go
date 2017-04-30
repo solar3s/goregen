@@ -36,13 +36,15 @@ func WrapCustomRW(wr http.ResponseWriter) http.ResponseWriter {
 	return wr
 }
 
-func Logger(handler http.Handler, name string) http.Handler {
+func Logger(handler http.Handler, name string, verbose bool) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		t0 := time.Now()
 		w = WrapCustomRW(w)
 		handler.ServeHTTP(w, r)
-		log.Printf("%s- %s %s> (%d) @%s: - agent:%s - %s",
-			name, r.Method, r.RequestURI, w.(*CustomResponseWriter).Status,
-			r.Header.Get("X-FORWARDED-FOR"), r.Header.Get("USER-AGENT"), time.Since(t0))
+		if verbose {
+			log.Printf("%s- %s %s> (%d) @%s: - agent:%s - %s",
+				name, r.Method, r.RequestURI, w.(*CustomResponseWriter).Status,
+				r.Header.Get("X-FORWARDED-FOR"), r.Header.Get("USER-AGENT"), time.Since(t0))
+		}
 	})
 }

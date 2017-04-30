@@ -12,7 +12,8 @@ var conn *regenbox.SerialConnection
 var server *www.Server
 
 var (
-	device = flag.String("dev", "", "path to serial port, if empty it will be searched automatically")
+	device  = flag.String("dev", "", "path to serial port, if empty it will be searched automatically")
+	verbose = flag.Bool("v", false, "higher verbosity")
 )
 
 func init() {
@@ -46,6 +47,7 @@ func main() {
 	server = &www.Server{
 		ListenAddr: "localhost:3636",
 		Regenbox:   rbox,
+		Verbose:    *verbose,
 	}
 	err = server.Start()
 	if err != nil {

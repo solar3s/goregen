@@ -11,6 +11,7 @@ import (
 type Server struct {
 	ListenAddr string
 	Regenbox   *regenbox.RegenBox
+	Verbose    bool
 }
 
 func NewServer() *Server {
@@ -54,7 +55,8 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	if s.Regenbox != nil {
 		i, err := s.Regenbox.ReadVoltage()
 		if err != nil {
-			tplData.Voltage = "error reading voltage"
+			log.Printf("ServeHTTP: error reading voltage: \"%s\"", err)
+			tplData.Voltage = fmt.Sprintf("error reading voltage: \"%s\"", err)
 		} else {
 			tplData.Voltage = fmt.Sprintf("%dmV", i)
 		}
@@ -74,7 +76,7 @@ func (s *Server) Start() error {
 		watcher.WatchConn()
 	}()
 
-	http.Handle("/", Logger(s, "www"))
+	http.Handle("/", Logger(s, "www", s.Verbose))
 	log.Printf("listening on %s...", s.ListenAddr)
 	if err := http.ListenAndServe(s.ListenAddr, nil); err != nil {
 		return err
