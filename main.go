@@ -4,12 +4,12 @@ import (
 	"flag"
 	"github.com/solar3s/goregen/regenbox"
 	"github.com/solar3s/goregen/www"
-	"go.bug.st/serial.v1"
 	"log"
+	"time"
 )
 
-var rbox *regenbox.RegenBox
-var err error
+var conn *regenbox.SerialConnection
+var server *www.Server
 
 var (
 	device = flag.String("dev", "", "path to serial port, if empty it will be searched automatically")
@@ -17,26 +17,37 @@ var (
 
 func init() {
 	flag.Parse()
-	var conn regenbox.Connection = nil
 	if *device != "" {
-		port, err := serial.Open(*device, regenbox.DefaultSerialMode)
+		port, config, err := regenbox.OpenPortName(*device)
 		if err != nil {
-			log.Fatal("error opening serial port:", err)
+			log.Fatal("error opening serial port: ", err)
 		}
-		conn = regenbox.SerialConnection{Port: port}
-	}
-	rbox, err = regenbox.NewRegenBox(conn, nil)
-	if err != nil {
-		log.Fatal("error initializing regenbox connection:", err)
+		conn = regenbox.NewSerial(port, config)
 	}
 }
 
 func main() {
-	s := www.Server{
+	cfg := &regenbox.Config{
+		OhmValue:      20,
+		Mode:          regenbox.ChargeOnly,
+		NbHalfCycles:  0,
+		UpDuration:    time.Hour * 6,
+		DownDuration:  time.Hour * 6,
+		TopVoltage:    1500,
+		BottomVoltage: 850,
+		IntervalSec:   time.Second * 10,
+	}
+	rbox, err := regenbox.NewRegenBox(conn, cfg)
+	if err != nil {
+		log.Fatal("error initializing regenbox connection: ", err)
+	}
+
+	log.Println("connected to", rbox.Conn.Path())
+	server = &www.Server{
 		ListenAddr: "localhost:3636",
 		Regenbox:   rbox,
 	}
-	err := s.Start()
+	err = server.Start()
 	if err != nil {
 		log.Fatal(err)
 	}

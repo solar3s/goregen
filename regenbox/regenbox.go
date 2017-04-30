@@ -81,10 +81,11 @@ func NewConfig() *Config {
 
 func NewRegenBox(conn *SerialConnection, cfg *Config) (rb *RegenBox, err error) {
 	if conn == nil {
-		conn, err = AutoConnectSerial(nil)
+		port, name, err := FindPort(nil)
 		if err != nil {
 			return nil, err
 		}
+		conn = NewSerial(port, name)
 	}
 	if cfg == nil {
 		cfg = NewConfig()
