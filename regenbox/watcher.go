@@ -46,7 +46,8 @@ func (w *Watcher) WatchConn() {
 		w.rbox.Lock()
 		err = w.rbox.ping()
 		if err != nil && st == Connected {
-			log.Println("lost serial connection:", err)
+			log.Printf("closing serial connection to \"%s\": %s", w.rbox.Conn.path, err)
+			w.rbox.Conn.Close()
 		}
 		st = w.rbox.State()
 
@@ -61,6 +62,7 @@ func (w *Watcher) WatchConn() {
 			}
 			w.rbox.Conn = NewSerial(port, cfg, name)
 			w.rbox.Conn.Start()
+			st = Connected
 
 			t, err := w.rbox.TestConnection()
 			if err == nil {
