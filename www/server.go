@@ -28,7 +28,7 @@ type RegenboxData struct {
 
 func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	if r.RequestURI != "/" {
-		http.Redirect(w, r, "/", http.StatusFound)
+		http.NotFound(w, r)
 		return
 	}
 
