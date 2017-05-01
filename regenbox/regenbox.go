@@ -87,6 +87,7 @@ func NewRegenBox(conn *SerialConnection, cfg *Config) (rb *RegenBox, err error) 
 			return nil, err
 		}
 		conn = NewSerial(port, cfg, name)
+		conn.Start()
 	}
 	if cfg == nil {
 		cfg = NewConfig()
@@ -334,8 +335,8 @@ func (rb *RegenBox) ping() error {
 // talk is generic 1-byte send and read []byte answer.
 // All higher level function should use talk as a wrapper.
 func (rb *RegenBox) talk(b byte) ([]byte, error) {
-	i, err := rb.Conn.Write([]byte{b})
-	if err != nil || i != 1 {
+	err := rb.Conn.Write([]byte{b})
+	if err != nil {
 		rb.state = WriteError
 		return nil, err
 	}
@@ -344,17 +345,15 @@ func (rb *RegenBox) talk(b byte) ([]byte, error) {
 
 // read reads from rb.Conn then returnes CRLF-trimmed response
 func (rb *RegenBox) read() (buf []byte, err error) {
-	buf = make([]byte, 256)
-	i, err := rb.Conn.Read(buf)
+	buf, err = rb.Conn.Read()
 	if err != nil {
 		rb.state = ReadError
-		return buf[:i], err
+		return buf, err
 	}
-	response := buf[:i]
-	if i == 0 || len(response) == 0 {
+	if buf == nil || len(buf) == 0 {
 		rb.state = UnexpectedError
 		return []byte{}, ErrEmptyRead
 	}
 	rb.state = Connected
-	return response, nil
+	return buf, nil
 }

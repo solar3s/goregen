@@ -60,6 +60,8 @@ func (w *Watcher) WatchConn() {
 				break
 			}
 			w.rbox.Conn = NewSerial(port, cfg, name)
+			w.rbox.Conn.Start()
+
 			t, err := w.rbox.TestConnection()
 			if err == nil {
 				log.Printf("reconnected to %s in %s", name, t)

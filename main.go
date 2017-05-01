@@ -24,6 +24,7 @@ func init() {
 			log.Fatal("error opening serial port: ", err)
 		}
 		conn = regenbox.NewSerial(port, config, *device)
+		conn.Start()
 	}
 }
 
