@@ -51,12 +51,13 @@ type Snapshot struct {
 type Config struct {
 	OhmValue      int           // Value of charge resstance in ohm, usually from 10 to 30ohm
 	Mode          Mode          // Auto-mode lets the box do charge cycles using the following config values
-	NbHalfCycles  int           // In auto-mode: number of half-cycles to do before halting auto-mode
-	UpDuration    time.Duration // In auto-mode: maximum time for an up-cycle before taking action
-	DownDuration  time.Duration // In auto-mode: maximum time for a down-cycle before taking action
-	TopVoltage    int           // In auto-mode: target top voltage before switching cycle
-	BottomVoltage int           // In auto-mode: target bottom voltage before switching cycle
-	IntervalSec   time.Duration // In auto-mode: sleep interval in second between each poll
+	NbHalfCycles  int           // In auto-mode: number of half-cycles to do before halting auto-mode (0: no-limit holdem)
+	UpDuration    time.Duration // In auto-mode: maximum time for an up-cycle before taking action (?)
+	DownDuration  time.Duration // In auto-mode: maximum time for a down-cycle before taking action (?)
+	TopVoltage    int           // In auto-mode: target top voltage before switching charge-cycle
+	BottomVoltage int           // In auto-mode: target bottom voltage before switching charge-cycle
+	IntervalSec   time.Duration // In auto-mode: sleep interval in second between each measure
+	ChargeFirst   bool          // In auto-mode: start auto-run with a charge-cycle (false: discharge)
 }
 
 type RegenBox struct {
@@ -127,6 +128,13 @@ func (rb *RegenBox) TestConnection() (_ time.Duration, err error) {
 func (rb *RegenBox) AutoRun() {
 	rb.stop = make(chan bool)
 	rb.wg.Add(1)
+	if (rb.config.Mode == ChargeOnly) || rb.config.ChargeFirst {
+		rb.chargeState = Charging
+		log.Println("auto-run: charging")
+	} else {
+		rb.chargeState = Discharging
+		log.Println("auto-run: discharging")
+	}
 	go func() {
 		defer func() {
 			rb.stop = nil // avoid closing of closed chan
@@ -166,12 +174,13 @@ func (rb *RegenBox) AutoRun() {
 
 			if rb.chargeState == Discharging {
 				if sn.Voltage <= rb.config.BottomVoltage {
-					log.Printf("bottom value %dmV reached", rb.config.BottomVoltage)
+					log.Printf("autorun: %dV reached bottom value", rb.config.BottomVoltage)
 					if rb.config.Mode == DischargeOnly {
 						log.Println("finished discharging battery (discharge only)")
 						return
 					}
 					err := rb.SetCharge()
+					log.Println("autorun: charging")
 					if err != nil {
 						log.Println("in rb.SetCharge:", err)
 					} else {
@@ -179,7 +188,7 @@ func (rb *RegenBox) AutoRun() {
 						halfCycles++
 					}
 				} else if time.Since(t0) >= rb.config.DownDuration {
-					log.Printf("couldn't discharge battery to %dmV in %s, battery's dead or something's wrong",
+					log.Printf("autorun: couldn't discharge battery to %dmV in %s, battery's dead or something's wrong",
 						rb.config.BottomVoltage, rb.config.DownDuration)
 					return
 				}
@@ -187,12 +196,13 @@ func (rb *RegenBox) AutoRun() {
 
 			if rb.chargeState == Charging {
 				if sn.Voltage >= rb.config.TopVoltage {
-					log.Printf("top value %dmV reached", rb.config.TopVoltage)
+					log.Printf("autorun: %dV reached top limit", rb.config.TopVoltage)
 					if rb.config.Mode == ChargeOnly {
 						log.Println("finished charging battery (charge only)")
 						return
 					}
 					err := rb.SetDischarge()
+					log.Println("autorun: discharging")
 					if err != nil {
 						log.Println("in rb.SetDischarge:", err)
 					} else {

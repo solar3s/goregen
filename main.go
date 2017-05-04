@@ -32,12 +32,13 @@ func main() {
 	cfg := &regenbox.Config{
 		OhmValue:      20,
 		Mode:          regenbox.ChargeOnly,
-		NbHalfCycles:  0,
-		UpDuration:    time.Hour * 6,
-		DownDuration:  time.Hour * 6,
-		TopVoltage:    1500,
-		BottomVoltage: 850,
+		NbHalfCycles:  10,
+		UpDuration:    time.Hour * 2,
+		DownDuration:  time.Hour * 2,
+		TopVoltage:    1410,
+		BottomVoltage: 900,
 		IntervalSec:   time.Second * 10,
+		ChargeFirst:   true,
 	}
 	rbox, err := regenbox.NewRegenBox(conn, cfg)
 	if err != nil {
