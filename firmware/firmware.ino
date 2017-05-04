@@ -142,26 +142,41 @@ void loop() {
   byte in = Serial.read();
   switch (in) {
     case READ_A0:
-      sendUint(getAnalog()); break;
+      sendUint(getAnalog());
+      break;
     case READ_V:
-      sendUint(getVoltage()); break;
+      sendUint(getVoltage());
+      break;
 
     case LED_0:
-      setLed(0); sendOk(); break;
+      setLed(0);
+      sendOk();
+      break;
     case LED_1:
-      setLed(1); sendOk(); break;
+      setLed(1);
+      sendOk();
+      break;
     case LED_TOGGLE:
-      sendBool(toggleLed()); break;
+      sendBool(toggleLed());
+      break;
 
     case PIN_DISCHARGE_0:
-      setDischarge(0); sendOk(); break;
+      setDischarge(0);
+      sendOk();
+      break;
     case PIN_DISCHARGE_1:
-      setDischarge(1); sendOk(); break;
+      setDischarge(1);
+      sendOk();
+      break;
 
     case PIN_CHARGE_0:
-      setCharge(0); sendOk(); break;
+      setCharge(0);
+      sendOk();
+      break;
     case PIN_CHARGE_1:
-      setCharge(1); sendOk(); break;
+      setCharge(1);
+      sendOk();
+      break;
 
     case MODE_IDLE:
       setDischarge(0);
