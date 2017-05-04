@@ -26,7 +26,7 @@ type RegenboxData struct {
 	Voltage     string
 }
 
-func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+func (s *Server) Home(w http.ResponseWriter, r *http.Request) {
 	if r.RequestURI != "/" {
 		http.NotFound(w, r)
 		return
@@ -70,16 +70,16 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func (s *Server) Start() error {
+func (s *Server) Start() {
 	go func() {
 		watcher := regenbox.NewWatcher(s.Regenbox, regenbox.DefaultWatcherConfig)
 		watcher.WatchConn()
 	}()
-
-	http.Handle("/", Logger(s, "www", s.Verbose))
-	log.Printf("listening on %s...", s.ListenAddr)
-	if err := http.ListenAndServe(s.ListenAddr, nil); err != nil {
-		return err
-	}
-	return nil
+	go func() {
+		http.Handle("/", Logger(http.HandlerFunc(s.Home), "www", s.Verbose))
+		log.Printf("listening on %s...", s.ListenAddr)
+		if err := http.ListenAndServe(s.ListenAddr, nil); err != nil {
+			log.Fatal("http.ListenAndServer:", err)
+		}
+	}()
 }

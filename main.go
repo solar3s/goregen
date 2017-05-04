@@ -51,8 +51,6 @@ func main() {
 		Regenbox:   rbox,
 		Verbose:    *verbose,
 	}
-	err = server.Start()
-	if err != nil {
-		log.Fatal(err)
-	}
+	server.Start()
+	<-make(chan bool)
 }
