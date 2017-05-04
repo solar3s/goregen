@@ -83,12 +83,10 @@ func NewConfig() *Config {
 
 func NewRegenBox(conn *SerialConnection, cfg *Config) (rb *RegenBox, err error) {
 	if conn == nil {
-		port, cfg, name, err := FindPort(nil)
+		conn, err = FindSerial(nil)
 		if err != nil {
 			return nil, err
 		}
-		conn = NewSerial(port, cfg, name)
-		conn.Start()
 	}
 	if cfg == nil {
 		cfg = NewConfig()
@@ -100,14 +98,11 @@ func NewRegenBox(conn *SerialConnection, cfg *Config) (rb *RegenBox, err error) 
 		chargeState: Idle,
 		state:       Connected,
 	}
-
-	_, err = rb.TestConnection()
 	return rb, err
 }
 
 const (
-	pingRetries  = 16
-	testConnPoll = time.Millisecond * 250
+	pingRetries  = 12
 )
 
 // TestConnection sends a ping every testConnPoll,
@@ -115,7 +110,6 @@ const (
 func (rb *RegenBox) TestConnection() (_ time.Duration, err error) {
 	t0 := time.Now()
 	for i := 0; i < pingRetries; i++ {
-		time.Sleep(testConnPoll)
 		err = rb.ping()
 		if err == nil {
 			break

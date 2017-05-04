@@ -142,12 +142,12 @@ func (sc *SerialConnection) writeRoutine() {
 	}
 }
 
-// FindPort tries to connect to first available serial port (platform independant hopefully).
-// If mode is nil, DefaultSerialMode is used.
-func FindPort(config *serial.Mode) (serial.Port, *serial.Mode, string, error) {
+// FindSerial tries to connect to first available serial port (platform independant hopefully).
+// If config is nil, DefaultSerialMode is used.
+func FindSerial(config *serial.Mode) (*SerialConnection, error) {
 	ports, err := serial.GetPortsList()
 	if err != nil {
-		return nil, nil, "", err
+		return nil, err
 	}
 	if config == nil {
 		config = DefaultSerialConfig
@@ -156,14 +156,24 @@ func FindPort(config *serial.Mode) (serial.Port, *serial.Mode, string, error) {
 	for _, v := range ports {
 		port, err = serial.Open(v, config)
 		if err == nil {
-			log.Printf("found serial port \"%s\"", v)
-			return port, config, v, nil
+			log.Printf("trying \"%s\"...", v)
+			conn := NewSerial(port, config, v)
+			conn.ReadTimeout = time.Millisecond * 250
+			conn.WriteTimeout = time.Millisecond * 250
+			conn.Start()
+			// create a temporary box to test connection
+			rb := &RegenBox{Conn: conn, config: new(Config)}
+			t, err := rb.TestConnection()
+			if err == nil {
+				log.Printf("connected to \"%s\" in %s", v, t)
+				return conn, nil
+			}
 		}
 	}
 	if err == nil {
-		return nil, config, "", ErrNoSerialPortFound
+		return nil, ErrNoSerialPortFound
 	}
-	return nil, config, "", err
+	return nil, err
 }
 
 func OpenPortName(name string) (port serial.Port, config *serial.Mode, err error) {

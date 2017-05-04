@@ -55,21 +55,13 @@ func (w *Watcher) WatchConn() {
 		case Connected:
 		// pass
 		default:
-			port, cfg, name, err := FindPort(nil)
+			conn, err := FindSerial(nil)
 			if err != nil {
 				// high-verbosity log
 				break
 			}
-			w.rbox.Conn = NewSerial(port, cfg, name)
-			w.rbox.Conn.Start()
+			w.rbox.Conn = conn
 			st = Connected
-
-			t, err := w.rbox.TestConnection()
-			if err == nil {
-				log.Printf("reconnected to %s in %s", name, t)
-			} else {
-				log.Println("in rbox.TestConnection:", err)
-			}
 		}
 		w.rbox.Unlock()
 	}
