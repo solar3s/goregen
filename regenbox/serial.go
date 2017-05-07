@@ -185,6 +185,9 @@ func FindSerial(config *serial.Mode) (*SerialConnection, error) {
 			if err == nil {
 				log.Printf("connected to \"%s\" in %s", v, t)
 				return conn, nil
+			} else {
+				conn.Close()
+				log.Printf("error connecting to \"%s\": %s", v, err)
 			}
 		}
 	}
