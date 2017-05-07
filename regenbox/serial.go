@@ -70,7 +70,10 @@ func (sc *SerialConnection) Start() {
 func (sc *SerialConnection) Read() (b []byte, err error) {
 	select {
 	case b = <-sc.rdChan:
-	case err = <-sc.errChan:
+		select {
+		case err = <-sc.errChan:
+		case <-sc.Closed():
+		}
 	case <-sc.Closed():
 		err = ErrClosedPort
 	case <-time.After(sc.ReadTimeout):
@@ -84,6 +87,11 @@ func (sc *SerialConnection) Read() (b []byte, err error) {
 func (sc *SerialConnection) Write(b []byte) (err error) {
 	select {
 	case sc.wrChan <- b:
+		select {
+		case err = <-sc.errChan:
+		case <-sc.Closed():
+			err = ErrClosedPort
+		}
 	case <-sc.Closed():
 		err = ErrClosedPort
 	case <-time.After(sc.WriteTimeout):
@@ -121,18 +129,15 @@ func (sc *SerialConnection) readRoutine() {
 		time.Sleep(time.Millisecond * 50)
 		b := make([]byte, 32)
 		i, err := sc.Port.Read(b)
-		if err != nil {
-			select {
-			case sc.errChan <- err:
-			case <-sc.Closed():
-				return
-			}
-		} else {
-			select {
-			case sc.rdChan <- b[:i]:
-			case <-sc.Closed():
-				return
-			}
+		select {
+		case sc.rdChan <- b[:i]:
+		case <-sc.Closed():
+			return
+		}
+		select {
+		case sc.errChan <- err:
+		case <-sc.Closed():
+			return
 		}
 	}
 }
@@ -147,8 +152,10 @@ func (sc *SerialConnection) writeRoutine() {
 			return
 		}
 		_, err := sc.Port.Write(b)
-		if err != nil {
-			log.Println("in sc.writeRoutine:", err)
+		select {
+		case sc.errChan <- err:
+		case <-sc.Closed():
+			return
 		}
 	}
 }
