@@ -32,7 +32,7 @@ func (w *Watcher) WatchConn() {
 	log.Printf("starting conn watcher (poll rate: %s)", w.cfg.ConnPollRate)
 
 	var (
-		st  State = Connected
+		st  State = w.rbox.State()
 		err error
 	)
 	for {
@@ -61,6 +61,7 @@ func (w *Watcher) WatchConn() {
 				break
 			}
 			w.rbox.Conn = conn
+			w.rbox.state = Connected
 			st = Connected
 		}
 		w.rbox.Unlock()

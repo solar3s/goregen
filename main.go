@@ -43,10 +43,9 @@ func main() {
 	}
 	rbox, err := regenbox.NewRegenBox(conn, cfg)
 	if err != nil {
-		log.Fatal("error initializing regenbox connection: ", err)
+		log.Println("error initializing regenbox connection:", err)
 	}
 
-	log.Println("connected to", rbox.Conn.Path())
 	server = &www.Server{
 		ListenAddr: "localhost:3636",
 		Regenbox:   rbox,

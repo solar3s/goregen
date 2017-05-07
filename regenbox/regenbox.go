@@ -9,6 +9,7 @@ import (
 )
 
 var ErrEmptyRead error = errors.New("message was empty")
+var ErrDisconnected error = errors.New("no connection available")
 
 //go:generate stringer -type=ChargeState
 type ChargeState int
@@ -84,9 +85,6 @@ func NewConfig() *Config {
 func NewRegenBox(conn *SerialConnection, cfg *Config) (rb *RegenBox, err error) {
 	if conn == nil {
 		conn, err = FindSerial(nil)
-		if err != nil {
-			return nil, err
-		}
 	}
 	if cfg == nil {
 		cfg = NewConfig()
@@ -98,11 +96,14 @@ func NewRegenBox(conn *SerialConnection, cfg *Config) (rb *RegenBox, err error) 
 		chargeState: Idle,
 		state:       Connected,
 	}
+	if conn == nil {
+		rb.state = Disconnected
+	}
 	return rb, err
 }
 
 const (
-	pingRetries  = 12
+	pingRetries = 12
 )
 
 // TestConnection sends a ping every testConnPoll,
@@ -339,6 +340,9 @@ func (rb *RegenBox) ping() error {
 // talk is generic 1-byte send and read []byte answer.
 // All higher level function should use talk as a wrapper.
 func (rb *RegenBox) talk(b byte) ([]byte, error) {
+	if rb.Conn == nil || rb.state == Disconnected {
+		return nil, ErrDisconnected
+	}
 	err := rb.Conn.Write([]byte{b})
 	if err != nil {
 		rb.state = WriteError
