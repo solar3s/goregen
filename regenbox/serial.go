@@ -71,7 +71,7 @@ func (sc *SerialConnection) Read() (b []byte, err error) {
 	select {
 	case b = <-sc.rdChan:
 	case err = <-sc.errChan:
-	case <-sc.closeChan:
+	case <-sc.Closed():
 		err = ErrClosedPort
 	case <-time.After(sc.ReadTimeout):
 		err = fmt.Errorf("read timeout (%s)", sc.ReadTimeout)
@@ -84,7 +84,7 @@ func (sc *SerialConnection) Read() (b []byte, err error) {
 func (sc *SerialConnection) Write(b []byte) (err error) {
 	select {
 	case sc.wrChan <- b:
-	case <-sc.closeChan:
+	case <-sc.Closed():
 		err = ErrClosedPort
 	case <-time.After(sc.WriteTimeout):
 		err = fmt.Errorf("write timeout (%s)", sc.WriteTimeout)
@@ -95,9 +95,20 @@ func (sc *SerialConnection) Write(b []byte) (err error) {
 // Close notifies read/write routines to stop, then waits
 // for them to return, it then actually closes serial port.
 func (sc *SerialConnection) Close() error {
+	select {
+	case <-sc.Closed():
+		return ErrClosedPort
+	default:
+	}
 	close(sc.closeChan)
 	sc.wg.Wait()
 	return sc.Port.Close()
+}
+
+// Closed exposes <-sc.closeChan, which is closed if
+// connection has been previously closed.
+func (sc *SerialConnection) Closed() <-chan struct{} {
+	return sc.closeChan
 }
 
 // Path returns device name / path of serial port.
@@ -113,13 +124,13 @@ func (sc *SerialConnection) readRoutine() {
 		if err != nil {
 			select {
 			case sc.errChan <- err:
-			case <-sc.closeChan:
+			case <-sc.Closed():
 				return
 			}
 		} else {
 			select {
 			case sc.rdChan <- b[:i]:
-			case <-sc.closeChan:
+			case <-sc.Closed():
 				return
 			}
 		}
@@ -132,7 +143,7 @@ func (sc *SerialConnection) writeRoutine() {
 		time.Sleep(time.Millisecond * 50)
 		select {
 		case b = <-sc.wrChan:
-		case <-sc.closeChan:
+		case <-sc.Closed():
 			return
 		}
 		_, err := sc.Port.Write(b)
