@@ -12,6 +12,7 @@ type Server struct {
 	ListenAddr string
 	Regenbox   *regenbox.RegenBox
 	Verbose    bool
+	Debug      bool
 }
 
 func NewServer() *Server {

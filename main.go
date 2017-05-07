@@ -14,6 +14,7 @@ var server *www.Server
 var (
 	device  = flag.String("dev", "", "path to serial port, if empty it will be searched automatically")
 	verbose = flag.Bool("v", false, "higher verbosity")
+	debug   = flag.Bool("debug", false, "enable debug mode")
 )
 
 func init() {
@@ -50,6 +51,7 @@ func main() {
 		ListenAddr: "localhost:3636",
 		Regenbox:   rbox,
 		Verbose:    *verbose,
+		Debug:      *debug,
 	}
 	server.Start()
 	<-make(chan bool)
