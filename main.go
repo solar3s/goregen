@@ -2,9 +2,12 @@ package main
 
 import (
 	"flag"
+	"fmt"
 	"github.com/solar3s/goregen/regenbox"
 	"github.com/solar3s/goregen/www"
 	"log"
+	"os"
+	"os/signal"
 	"time"
 )
 
@@ -53,5 +56,10 @@ func main() {
 		Debug:      *debug,
 	}
 	server.Start()
-	<-make(chan bool)
+
+	trap := make(chan os.Signal)
+	signal.Notify(trap, os.Kill, os.Interrupt)
+	sig := <-trap
+	fmt.Println()
+	log.Printf("signal: %s", sig.String())
 }
