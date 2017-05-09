@@ -67,7 +67,7 @@ type RegenBox struct {
 	config      *Config
 	chargeState ChargeState
 	state       State
-	stop        chan bool
+	autorunCh   chan struct{}
 	wg          sync.WaitGroup
 
 	measures []Snapshot
@@ -119,9 +119,9 @@ func (rb *RegenBox) TestConnection() (_ time.Duration, err error) {
 	return time.Since(t0), err
 }
 
-// AutoRun starts an auto-cycle routine. To stop it, call StopAutoRun().
-func (rb *RegenBox) AutoRun() {
-	rb.stop = make(chan bool)
+// Starts a detached routine. To stop it, call StopAutoRun()
+func (rb *RegenBox) Start() {
+	rb.autorunCh = make(chan struct{})
 	rb.wg.Add(1)
 	if (rb.config.Mode == ChargeOnly) || rb.config.ChargeFirst {
 		rb.chargeState = Charging
@@ -132,7 +132,7 @@ func (rb *RegenBox) AutoRun() {
 	}
 	go func() {
 		defer func() {
-			rb.stop = nil // avoid closing of closed chan
+			rb.autorunCh = nil // avoid closing of closed chan
 			rb.wg.Done()
 
 			log.Println("AutoRun is out, setting idle mode")
@@ -147,7 +147,7 @@ func (rb *RegenBox) AutoRun() {
 		var t0 = time.Now()
 		for {
 			select {
-			case <-rb.stop:
+			case <-rb.autorunCh:
 				return
 			case <-time.After(rb.config.IntervalSec):
 			}
@@ -219,14 +219,19 @@ func (rb *RegenBox) AutoRun() {
 	}()
 }
 
-// StopAutoRun notifies AutoRun() to stop, and wait until it returns.
-func (rb *RegenBox) StopAutoRun() {
-	if rb.stop == nil {
+// Stops the box, and wait until Start() loop returns.
+func (rb *RegenBox) Stop() {
+	if rb.Stopped() {
 		return
 	}
 	log.Println("stopping AutoRun...")
-	close(rb.stop)
+	close(rb.autorunCh)
 	rb.wg.Wait()
+}
+
+// Stopped returns false while box is running
+func (rb *RegenBox) Stopped() bool {
+	return rb.autorunCh == nil
 }
 
 // Snapshot retreives the state of rb at a given time.
