@@ -3,30 +3,84 @@
 <head>
 	<meta charset="UTF-8">
 	<title>Regenbox</title>
+	<style>
+		table {
+			border-spacing: 15px 3px;
+		}
+	</style>
 	<script>
-		document.getElementById("reconnect").on("click", function() {
-			xhr.open("POST", "reconnect", true);
-			var err = xhr.send(function(a) {
-				console.log(this, a);
-			});
-		});
 	</script>
 </head>
 <body>
 	<h1>Hello Regenbox!</h1>
-	<ul>
-		<li>
-			State: {{.State}}
-		</li>
-		<li>
-			ChargeState: {{.ChargeState}}
-		</li>
-		<li>
-			Tension: {{.Voltage}}
-		</li>
-		<li>
-			<button id="reconnect">Reconnect</button>
-		</li>
-	</ul>
+	<hr/>
+	<h2>overview</h2>
+	<table>
+		<tr>
+			<td>State:</td>
+			<td class="vState">{{.State}}</td>
+		</tr>
+		<tr>
+			<td>ChargeState:</td>
+			<td class="vChargeState">{{.ChargeState}}</td>
+		</tr>
+		<tr>
+			<td>Tension</td>
+			<td class="vVoltage">{{.Voltage}}</td>
+		</tr>
+	</table>
+	<hr>
+	<!--
+	type Config struct {
+		OhmValue      int           // Value of charge resstance in ohm, usually from 10 to 30ohm
+		Mode          Mode          // Auto-mode lets the box do charge cycles using the following config values
+		NbHalfCycles  int           // In auto-mode: number of half-cycles to do before halting auto-mode (0: no-limit holdem)
+		UpDuration    time.Duration // In auto-mode: maximum time for an up-cycle before taking action (?)
+		DownDuration  time.Duration // In auto-mode: maximum time for a down-cycle before taking action (?)
+		TopVoltage    int           // In auto-mode: target top voltage before switching charge-cycle
+		BottomVoltage int           // In auto-mode: target bottom voltage before switching charge-cycle
+		IntervalSec   time.Duration // In auto-mode: sleep interval in second between each measure
+		ChargeFirst   bool          // In auto-mode: start auto-run with a charge-cycle (false: discharge)
+	}
+	-->
+	<h2>config</h2>
+	<table>
+		<tr>
+			<td>Resistance value: </td>
+			<td class="cfgOhmValue">{{.Config.OhmValue}} Ohm</td>
+		</tr>
+		<tr>
+			<td>Mode: </td>
+			<td class="cfgMode">{{.Config.Mode}}</td>
+		</tr>
+		<tr>
+			<td>Number of half-cycles to do: </td>
+			<td class="cfgNbHalfCycles">{{.Config.NbHalfCycles}}</td>
+		</tr>
+		<tr>
+			<td>Maximum charge duration: </td>
+			<td class="cfgUpDuration">{{.Config.UpDuration}}</td>
+		</tr>
+		<tr>
+			<td>Maximum discharge duration: </td>
+			<td class="cfgDownDuration">{{.Config.DownDuration}}</td>
+		</tr>
+		<tr>
+			<td>Target upper-bond voltage: </td>
+			<td class="cfgTopVoltage">{{.Config.TopVoltage}} mV</td>
+		</tr>
+		<tr>
+			<td>Target lower-bond voltage: </td>
+			<td class="cfgBottomVoltage">{{.Config.BottomVoltage}} mV</td>
+		</tr>
+		<tr>
+			<td>Snapshots interval duration: </td>
+			<td class="cfgIntervalSec">{{.Config.IntervalSec}}</td>
+		</tr>
+		<tr>
+			<td>First cycle is a charge cycle: </td>
+			<td class="cfgChargeFirst">{{.Config.ChargeFirst}}</td>
+		</tr>
+	</table>
 </body>
 </html>
