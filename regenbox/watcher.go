@@ -6,8 +6,9 @@ import (
 )
 
 type Watcher struct {
-	rbox *RegenBox
-	cfg  *WatcherConfig
+	rbox   *RegenBox
+	cfg    *WatcherConfig
+	stopCh chan struct{}
 }
 
 type WatcherConfig struct {
@@ -28,9 +29,17 @@ func NewWatcher(box *RegenBox, cfg *WatcherConfig) *Watcher {
 	}
 }
 
+func (w *Watcher) Stop() {
+	if w.stopCh == nil {
+		return
+	}
+	log.Println("stopping conn watcher")
+	close(w.stopCh)
+}
+
 func (w *Watcher) WatchConn() {
 	log.Printf("starting conn watcher (poll rate: %s)", w.cfg.ConnPollRate)
-
+	w.stopCh = make(chan struct{})
 	var (
 		st  State = w.rbox.State()
 		err error
@@ -38,8 +47,8 @@ func (w *Watcher) WatchConn() {
 	for {
 		select {
 		case <-time.After(w.cfg.ConnPollRate):
-		case <-w.rbox.stop:
-			log.Println("rbox.stop chan closed, watcher out")
+		case <-w.stopCh:
+			w.stopCh = nil
 			return
 		}
 
