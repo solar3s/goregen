@@ -62,4 +62,6 @@ func main() {
 	sig := <-trap
 	fmt.Println()
 	log.Printf("signal: %s", sig.String())
+	log.Println("stopping regenbox")
+	server.Regenbox.Stop()
 }
