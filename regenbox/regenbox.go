@@ -24,22 +24,22 @@ const (
 type State int
 
 const (
-	Disconnected    State = State(iota)
-	Connected       State = State(iota)
-	WriteError      State = State(iota)
-	ReadError       State = State(iota)
-	UnexpectedError State = State(iota)
-	NilBox          State = State(iota)
+	Disconnected    State = State(0)
+	Connected       State = State(1)
+	WriteError      State = State(2)
+	ReadError       State = State(3)
+	UnexpectedError State = State(4)
+	NilBox          State = State(5)
 )
 
 //go:generate stringer -type=Mode
 type Mode int
 
 const (
-	Manual        Mode = Mode(iota)
-	DischargeOnly Mode = Mode(iota) // Discharge until BottomVoltage is reached, then idle
-	ChargeOnly    Mode = Mode(iota) // Charge until TopVoltage is reached, then idle
-	AutoRun       Mode = Mode(iota) // Do cycles up to NbCycles between Bottom & TopValues, then idle
+	Manual        Mode = Mode(0)
+	DischargeOnly Mode = Mode(1) // Discharge until BottomVoltage is reached, then idle
+	ChargeOnly    Mode = Mode(2) // Charge until TopVoltage is reached, then idle
+	AutoRun       Mode = Mode(3) // Do cycles up to NbCycles between Bottom & TopValues, then idle
 )
 
 type Snapshot struct {
