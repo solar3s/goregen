@@ -26,6 +26,7 @@ type RegenboxData struct {
 	State       string
 	ChargeState string
 	Voltage     string
+	Config      regenbox.Config
 }
 
 // Config POST: s.Regenbox.SetConfig() (json encoded),
@@ -95,6 +96,7 @@ func (s *Server) Home(w http.ResponseWriter, r *http.Request) {
 		State:       state.String(),
 		ChargeState: "-",
 		Voltage:     "-",
+		Config:      regenbox.Config{},
 	}
 
 	if s.Regenbox != nil {
@@ -106,6 +108,7 @@ func (s *Server) Home(w http.ResponseWriter, r *http.Request) {
 			tplData.Voltage = fmt.Sprintf("%dmV", i)
 		}
 		tplData.ChargeState = s.Regenbox.ChargeState().String()
+		tplData.Config = s.Regenbox.Config()
 	}
 
 	err = t.ExecuteTemplate(w, name, tplData)
