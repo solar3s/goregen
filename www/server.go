@@ -23,6 +23,7 @@ func NewServer() *Server {
 }
 
 type RegenboxData struct {
+	ListenAddr  string
 	State       string
 	ChargeState string
 	Voltage     string
@@ -93,6 +94,7 @@ func (s *Server) Home(w http.ResponseWriter, r *http.Request) {
 
 	state := s.Regenbox.State()
 	var tplData = RegenboxData{
+		ListenAddr:  s.ListenAddr,
 		State:       state.String(),
 		ChargeState: "-",
 		Voltage:     "-",
