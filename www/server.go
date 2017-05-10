@@ -103,13 +103,10 @@ func (s *Server) Home(w http.ResponseWriter, r *http.Request) {
 
 	if s.Regenbox != nil {
 		i, err := s.Regenbox.ReadVoltage()
-		if err != nil {
-			log.Printf("ServeHTTP: error reading voltage: \"%s\"", err)
-			tplData.Voltage = fmt.Sprintf("error reading voltage: \"%s\"", err)
-		} else {
+		if err == nil {
 			tplData.Voltage = fmt.Sprintf("%dmV", i)
+			tplData.ChargeState = s.Regenbox.ChargeState().String()
 		}
-		tplData.ChargeState = s.Regenbox.ChargeState().String()
 		tplData.Config = s.Regenbox.Config()
 	}
 
