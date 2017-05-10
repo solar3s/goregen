@@ -26,6 +26,11 @@ func (w *CustomResponseWriter) WriteHeader(statusCode int) {
 	w.ResponseWriter.WriteHeader(statusCode)
 }
 
+func NilHandler(w http.ResponseWriter, _ *http.Request) {
+	w.Write([]byte{})
+	return
+}
+
 func WrapCustomRW(wr http.ResponseWriter) http.ResponseWriter {
 	if _, ok := wr.(*CustomResponseWriter); !ok {
 		return &CustomResponseWriter{

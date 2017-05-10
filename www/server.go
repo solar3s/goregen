@@ -125,6 +125,7 @@ func (s *Server) Start() {
 	go func() {
 		http.Handle("/config", Logger(http.HandlerFunc(s.Config), "config", s.Verbose))
 		http.Handle("/snapshot", Logger(http.HandlerFunc(s.Snapshot), "snapshot", s.Verbose))
+		http.Handle("/favicon.ico", http.HandlerFunc(NilHandler))
 		http.Handle("/", Logger(http.HandlerFunc(s.Home), "www", s.Verbose))
 		log.Printf("listening on %s...", s.ListenAddr)
 		if err := http.ListenAndServe(s.ListenAddr, nil); err != nil {
