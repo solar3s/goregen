@@ -1,7 +1,10 @@
 package www
 
 import (
+	"bufio"
+	"errors"
 	"log"
+	"net"
 	"net/http"
 	"time"
 )
@@ -24,6 +27,13 @@ func (w *CustomResponseWriter) WriteHeader(statusCode int) {
 	// set w.Status then forward to inner ResposeWriter
 	w.Status = statusCode
 	w.ResponseWriter.WriteHeader(statusCode)
+}
+
+func (w *CustomResponseWriter) Hijack() (net.Conn, *bufio.ReadWriter, error) {
+	if h, ok := w.ResponseWriter.(http.Hijacker); ok {
+		return h.Hijack()
+	}
+	return nil, nil, errors.New("underlying ResponseWriter is not a Hijacker")
 }
 
 func NilHandler(w http.ResponseWriter, _ *http.Request) {

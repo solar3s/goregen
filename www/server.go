@@ -3,10 +3,12 @@ package www
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/gorilla/websocket"
 	"github.com/solar3s/goregen/regenbox"
 	"html/template"
 	"log"
 	"net/http"
+	"time"
 )
 
 type Server struct {
@@ -14,6 +16,8 @@ type Server struct {
 	Regenbox   *regenbox.RegenBox
 	Verbose    bool
 	Debug      bool
+
+	wsUpgrader *websocket.Upgrader
 }
 
 func NewServer() *Server {
@@ -28,6 +32,29 @@ type RegenboxData struct {
 	ChargeState string
 	Voltage     string
 	Config      regenbox.Config
+}
+
+func (s *Server) WsSnapshot(w http.ResponseWriter, r *http.Request) {
+	conn, err := s.wsUpgrader.Upgrade(w, r, nil)
+	if err != nil {
+		log.Println("error subscribing to websocket:", err)
+		http.Error(w, "error subscribing to websocket", 500)
+		return
+	}
+
+	log.Printf("websocket - subscription from %s", conn.RemoteAddr())
+	go func(conn *websocket.Conn, s *Server) {
+		var err error
+		for {
+			<-time.After(time.Second * 2)
+			err = conn.WriteJSON(s.Regenbox.Snapshot())
+			if err != nil {
+				log.Printf("websocket - lost connection to %s", conn.RemoteAddr())
+				conn.Close()
+				return
+			}
+		}
+	}(conn, s)
 }
 
 // Config POST: s.Regenbox.SetConfig() (json encoded),
@@ -118,11 +145,16 @@ func (s *Server) Home(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) Start() {
+	s.wsUpgrader = &websocket.Upgrader{
+		ReadBufferSize:  1024,
+		WriteBufferSize: 1024,
+	}
 	go func() {
 		watcher := regenbox.NewWatcher(s.Regenbox, regenbox.DefaultWatcherConfig)
 		watcher.WatchConn()
 	}()
 	go func() {
+		http.Handle("/subscribe/snapshot", Logger(http.HandlerFunc(s.WsSnapshot), "ws-snapshot", s.Verbose))
 		http.Handle("/config", Logger(http.HandlerFunc(s.Config), "config", s.Verbose))
 		http.Handle("/snapshot", Logger(http.HandlerFunc(s.Snapshot), "snapshot", s.Verbose))
 		http.Handle("/favicon.ico", http.HandlerFunc(NilHandler))
