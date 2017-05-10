@@ -247,7 +247,6 @@ func (rb *RegenBox) Snapshot() Snapshot {
 	s.Voltage, err = rb.ReadVoltage()
 	if err != nil {
 		s.State = rb.state // update state, it should contain an error
-		log.Printf("in rb.ReadVoltage: %s (state: %s)", err, s.State)
 	}
 	s.ChargeState = rb.ChargeState()
 	return s
