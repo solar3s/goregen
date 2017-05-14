@@ -59,7 +59,8 @@ func Logger(handler http.Handler, name string, verbose bool) http.Handler {
 		t0 := time.Now()
 		w = WrapCustomRW(w)
 		handler.ServeHTTP(w, r)
-		if verbose {
+		status := w.(*CustomResponseWriter).Status
+		if verbose || status != 200 {
 			log.Printf("%s- %s %s> (%d) @%s: - agent:%s - %s",
 				name, r.Method, r.RequestURI, w.(*CustomResponseWriter).Status,
 				r.Header.Get("X-FORWARDED-FOR"), r.Header.Get("USER-AGENT"), time.Since(t0))
