@@ -73,6 +73,18 @@ type RegenBox struct {
 	measures []Snapshot
 }
 
+var DefaultConfig = Config{
+	OhmValue:      20,
+	Mode:          ChargeOnly,
+	NbHalfCycles:  10,
+	UpDuration:    time.Hour * 2,
+	DownDuration:  time.Hour * 2,
+	TopVoltage:    1410,
+	BottomVoltage: 900,
+	IntervalSec:   time.Second * 10,
+	ChargeFirst:   true,
+}
+
 func NewConfig() *Config {
 	return &Config{
 		OhmValue: 20, Mode: AutoRun, NbHalfCycles: 0,
