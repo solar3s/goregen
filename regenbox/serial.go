@@ -126,7 +126,6 @@ func (sc *SerialConnection) Path() string {
 
 func (sc *SerialConnection) readRoutine() {
 	for {
-		time.Sleep(time.Millisecond * 50)
 		b := make([]byte, 32)
 		i, err := sc.Port.Read(b)
 		select {
@@ -145,7 +144,6 @@ func (sc *SerialConnection) readRoutine() {
 func (sc *SerialConnection) writeRoutine() {
 	var b []byte
 	for {
-		time.Sleep(time.Millisecond * 50)
 		select {
 		case b = <-sc.wrChan:
 		case <-sc.Closed():
