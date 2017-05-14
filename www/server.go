@@ -9,6 +9,8 @@ import (
 	"html/template"
 	"log"
 	"net/http"
+	"path"
+	"path/filepath"
 	"time"
 )
 
@@ -107,25 +109,46 @@ func (s *Server) Snapshot(w http.ResponseWriter, r *http.Request) {
 	_ = json.NewEncoder(w).Encode(s.Regenbox.Snapshot())
 }
 
+// makeStaticHandler creates a handler that tries to load r.URL.Path
+// file from s.StaticDir first, then from Assets. It executes successfully
+// loaded template with profided tplData.
+func (s *Server) makeStaticHandler(tplData interface{}) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		var err error
+		var tpath = filepath.Join(s.StaticDir, r.URL.Path)
+		var tname = filepath.Base(r.URL.Path)
+
+		tpl := template.New(tname).Funcs(s.tplFuncs)
+		tpl2, err := tpl.ParseFiles(tpath)
+		if err != nil {
+			// try loading asset instead
+			asset, err := Asset(path.Join("static", r.URL.Path))
+			if err != nil {
+				http.NotFound(w, r)
+				return
+			}
+			tpl2, err = tpl.Parse(string(asset))
+			if err != nil {
+				http.Error(w, fmt.Sprintf("error parsing %s template: %s", r.URL.Path, err), http.StatusInternalServerError)
+				return
+			}
+		}
+
+		err = tpl2.ExecuteTemplate(w, tname, tplData)
+		if err != nil {
+			http.Error(w, fmt.Sprintf("error executing %s template: %s", r.URL.Path, err), http.StatusInternalServerError)
+			return
+		}
+		return
+	})
+}
+
+// Static server
+func (s *Server) Static(w http.ResponseWriter, r *http.Request) {
+	s.makeStaticHandler(nil).ServeHTTP(w, r)
+}
+
 func (s *Server) Home(w http.ResponseWriter, r *http.Request) {
-	if r.RequestURI != "/" {
-		http.NotFound(w, r)
-		return
-	}
-
-	name := "html/home.html"
-	asset, err := Asset(name)
-	if err != nil {
-		http.Error(w, fmt.Sprintf("couldn't load asset: %s", err), http.StatusInternalServerError)
-		return
-	}
-
-	t, err := template.New(name).Funcs(s.tplFuncs).Parse(string(asset))
-	if err != nil {
-		http.Error(w, fmt.Sprintf("error parsing %s template: %s", name, err), http.StatusInternalServerError)
-		return
-	}
-
 	state := s.Regenbox.State()
 	var tplData = RegenboxData{
 		ListenAddr:  s.ListenAddr,
@@ -144,11 +167,9 @@ func (s *Server) Home(w http.ResponseWriter, r *http.Request) {
 		tplData.Config = s.Regenbox.Config()
 	}
 
-	err = t.ExecuteTemplate(w, name, tplData)
-	if err != nil {
-		http.Error(w, fmt.Sprintf("error executing %s template: %s", name, err), http.StatusInternalServerError)
-		return
-	}
+	// set path to home template in request
+	r.URL.Path = "html/home.html"
+	s.makeStaticHandler(tplData).ServeHTTP(w, r)
 }
 
 func (s *Server) Start() {
@@ -168,6 +189,9 @@ func (s *Server) Start() {
 		watcher.WatchConn()
 	}()
 	go func() {
+		s.router.PathPrefix("/static/").Handler(
+			http.StripPrefix("/static/", Logger(http.HandlerFunc(s.Static), "static", s.Verbose))).
+			Methods("GET")
 		s.router.Handle("/subscribe/snapshot",
 			Logger(http.HandlerFunc(s.WsSnapshot), "ws-snapshot", s.Verbose)).
 			Methods("GET")
