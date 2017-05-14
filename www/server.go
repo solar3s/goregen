@@ -207,9 +207,14 @@ func (s *Server) Start() {
 			Methods("GET")
 
 		// http root handle on gorilla router
-		http.Handle("/", s.router)
+		srv := &http.Server{
+			Handler:      s.router,
+			Addr:         s.ListenAddr,
+			WriteTimeout: 4 * time.Second,
+			ReadTimeout:  4 * time.Second,
+		}
 		log.Printf("listening on %s...", s.ListenAddr)
-		if err := http.ListenAndServe(s.ListenAddr, nil); err != nil {
+		if err := srv.ListenAndServe(); err != nil {
 			log.Fatal("http.ListenAndServer:", err)
 		}
 	}()
