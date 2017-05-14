@@ -9,6 +9,21 @@
 		}
 	</style>
 	<script>
+		function subscribeState() {
+			var ws = new WebSocket("ws://{{.ListenAddr}}/subscribe/snapshot");
+			ws.onopen = function(e) {
+				 console.log('open', e);
+			};
+			ws.onerror = function(e) {
+				console.log('error', e);
+			};
+			ws.onmessage = function(e) {
+				console.log('data', e.data);
+			};
+			ws.onclose = function(e) {
+				console.log('close', e);
+			}
+		}
 	</script>
 </head>
 <body>
