@@ -3,6 +3,7 @@ package www
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/gorilla/mux"
 	"github.com/gorilla/websocket"
 	"github.com/solar3s/goregen/regenbox"
 	"html/template"
@@ -17,6 +18,7 @@ type Server struct {
 	Verbose    bool
 	Debug      bool
 
+	router     *mux.Router
 	wsUpgrader *websocket.Upgrader
 	tplFuncs   template.FuncMap
 }
@@ -155,17 +157,29 @@ func (s *Server) Start() {
 		"css":  s.RenderCss,
 		"html": s.RenderHtml,
 	}
+	s.router = mux.NewRouter()
 
 	go func() {
 		watcher := regenbox.NewWatcher(s.Regenbox, regenbox.DefaultWatcherConfig)
 		watcher.WatchConn()
 	}()
 	go func() {
-		http.Handle("/subscribe/snapshot", Logger(http.HandlerFunc(s.WsSnapshot), "ws-snapshot", s.Verbose))
-		http.Handle("/config", Logger(http.HandlerFunc(s.Config), "config", s.Verbose))
-		http.Handle("/snapshot", Logger(http.HandlerFunc(s.Snapshot), "snapshot", s.Verbose))
-		http.Handle("/favicon.ico", http.HandlerFunc(NilHandler))
-		http.Handle("/", Logger(http.HandlerFunc(s.Home), "www", s.Verbose))
+		s.router.Handle("/subscribe/snapshot",
+			Logger(http.HandlerFunc(s.WsSnapshot), "ws-snapshot", s.Verbose)).
+			Methods("GET")
+		s.router.Handle("/config",
+			Logger(http.HandlerFunc(s.Config), "config", s.Verbose)).
+			Methods("GET", "POST")
+		s.router.Handle("/snapshot",
+			Logger(http.HandlerFunc(s.Snapshot), "snapshot", s.Verbose)).
+			Methods("GET")
+		s.router.Handle("/favicon.ico", http.HandlerFunc(NilHandler))
+		s.router.Handle("/",
+			Logger(http.HandlerFunc(s.Home), "www", s.Verbose)).
+			Methods("GET")
+
+		// http root handle on gorilla router
+		http.Handle("/", s.router)
 		log.Printf("listening on %s...", s.ListenAddr)
 		if err := http.ListenAndServe(s.ListenAddr, nil); err != nil {
 			log.Fatal("http.ListenAndServer:", err)
