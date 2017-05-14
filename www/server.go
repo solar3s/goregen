@@ -51,14 +51,19 @@ func (s *Server) WsSnapshot(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	log.Printf("websocket - subscription from %s", conn.RemoteAddr())
+	if s.Verbose {
+		log.Printf("websocket - subscription from %s", conn.RemoteAddr())
+	}
+
 	go func(conn *websocket.Conn, s *Server) {
 		var err error
 		for {
 			<-time.After(time.Second * 2)
 			err = conn.WriteJSON(s.Regenbox.Snapshot())
 			if err != nil {
-				log.Printf("websocket - lost connection to %s", conn.RemoteAddr())
+				if s.Verbose {
+					log.Printf("websocket - lost connection to %s", conn.RemoteAddr())
+				}
 				conn.Close()
 				return
 			}
