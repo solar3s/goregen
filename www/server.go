@@ -41,7 +41,7 @@ type RegenboxData struct {
 func (s *Server) WsSnapshot(w http.ResponseWriter, r *http.Request) {
 	var interval = s.WsInterval
 	if v, ok := r.URL.Query()["poll"]; ok {
-		if d, err := time.ParseDuration(v[0]); err != nil {
+		if d, err := time.ParseDuration(v[0]); err == nil {
 			interval = d
 		}
 	}
