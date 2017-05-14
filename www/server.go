@@ -18,6 +18,7 @@ type Server struct {
 	Debug      bool
 
 	wsUpgrader *websocket.Upgrader
+	tplFuncs   template.FuncMap
 }
 
 func NewServer() *Server {
@@ -113,7 +114,7 @@ func (s *Server) Home(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	t, err := template.New(name).Parse(string(asset))
+	t, err := template.New(name).Funcs(s.tplFuncs).Parse(string(asset))
 	if err != nil {
 		http.Error(w, fmt.Sprintf("error parsing %s template: %s", name, err), http.StatusInternalServerError)
 		return
@@ -149,6 +150,12 @@ func (s *Server) Start() {
 		ReadBufferSize:  1024,
 		WriteBufferSize: 1024,
 	}
+	s.tplFuncs = template.FuncMap{
+		"js":   s.RenderJs,
+		"css":  s.RenderCss,
+		"html": s.RenderHtml,
+	}
+
 	go func() {
 		watcher := regenbox.NewWatcher(s.Regenbox, regenbox.DefaultWatcherConfig)
 		watcher.WatchConn()

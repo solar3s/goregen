@@ -2,7 +2,10 @@ package www
 
 import (
 	"bufio"
+	"bytes"
 	"errors"
+	"fmt"
+	"html/template"
 	"log"
 	"net"
 	"net/http"
@@ -62,4 +65,60 @@ func Logger(handler http.Handler, name string, verbose bool) http.Handler {
 				r.Header.Get("X-FORWARDED-FOR"), r.Header.Get("USER-AGENT"), time.Since(t0))
 		}
 	})
+}
+
+// renderAsset executes template located at path (assets.go),
+// fake-recursively if specified,
+// with data if specified,
+// and fncs if specified. Returns a value or an error.
+func renderAsset(name string,
+	fncs template.FuncMap, recur int, data interface{}) (out string, err error) {
+
+	asset, err := Asset(name)
+	if err != nil {
+		return "", err
+	} else if recur == 1 {
+		return string(asset), nil
+	}
+
+	t, err := template.New(name).Funcs(fncs).Parse(string(asset))
+	if err != nil {
+		return "", err
+	}
+
+	buf := new(bytes.Buffer)
+	err = t.ExecuteTemplate(buf, name, data)
+	if err != nil {
+		return "", err
+	}
+	return string(buf.Bytes()), nil
+}
+
+// RenderJs renders un-espaced js asset
+func (s *Server) RenderJs(name string, data interface{}) template.JS {
+	js, err := renderAsset(name, s.tplFuncs, 0, data)
+	if err != nil {
+		log.Printf("renderJs %s: %s", name, err)
+		return template.JS(fmt.Sprintf("console.error('%s');", err.Error()))
+	}
+	return template.JS(js)
+}
+
+// RenderCss renders un-espaced css asset
+func (s *Server) RenderCss(name string, data interface{}) template.CSS {
+	css, err := renderAsset(name, s.tplFuncs, 0, data)
+	if err != nil {
+		log.Printf("renderCss %s: %s", name, err)
+		return template.CSS("")
+	}
+	return template.CSS(css)
+}
+
+// RenderHtml renders un-espaced html asset
+func (s *Server) RenderHtml(name string, data interface{}) template.HTML {
+	html, err := renderAsset(name, s.tplFuncs, 0, data)
+	if err != nil {
+		return template.HTML(fmt.Sprintf("<span class='error'>'%s'</span>", err.Error()))
+	}
+	return template.HTML(html)
 }
