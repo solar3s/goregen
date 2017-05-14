@@ -18,6 +18,10 @@ type Server struct {
 	Verbose    bool
 	Debug      bool
 
+	RboxConfig string
+	RootDir    string
+	StaticDir  string
+
 	router     *mux.Router
 	wsUpgrader *websocket.Upgrader
 	tplFuncs   template.FuncMap
