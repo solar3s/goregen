@@ -59,7 +59,6 @@ func (s *Server) WsSnapshot(w http.ResponseWriter, r *http.Request) {
 	go func(conn *websocket.Conn, s *Server) {
 		var err error
 		for {
-			<-time.After(interval)
 			err = conn.WriteJSON(s.Regenbox.Snapshot())
 			if err != nil {
 				if s.Verbose {
@@ -68,6 +67,7 @@ func (s *Server) WsSnapshot(w http.ResponseWriter, r *http.Request) {
 				conn.Close()
 				return
 			}
+			<-time.After(interval)
 		}
 	}(conn, s)
 }
