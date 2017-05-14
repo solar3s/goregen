@@ -11,6 +11,7 @@ import (
 	"os/signal"
 	"path/filepath"
 	"runtime"
+	"time"
 )
 
 var (
@@ -103,6 +104,7 @@ func main() {
 		RboxConfig: *cfg,
 		RootDir:    *root,
 		StaticDir:  static,
+		WsInterval: time.Second * 5,
 	}
 	server.Start()
 

@@ -16,23 +16,18 @@ import (
 
 type Server struct {
 	ListenAddr string
-	Regenbox   *regenbox.RegenBox
 	Verbose    bool
 	Debug      bool
-
 	RboxConfig string
 	RootDir    string
 	StaticDir  string
+	WsInterval time.Duration
+
+	Regenbox *regenbox.RegenBox
 
 	router     *mux.Router
 	wsUpgrader *websocket.Upgrader
 	tplFuncs   template.FuncMap
-}
-
-func NewServer() *Server {
-	return &Server{
-		ListenAddr: "localhost:8080",
-	}
 }
 
 type RegenboxData struct {
@@ -44,6 +39,12 @@ type RegenboxData struct {
 }
 
 func (s *Server) WsSnapshot(w http.ResponseWriter, r *http.Request) {
+	var interval = s.WsInterval
+	if v, ok := r.URL.Query()["poll"]; ok {
+		if d, err := time.ParseDuration(v[0]); err != nil {
+			interval = d
+		}
+	}
 	conn, err := s.wsUpgrader.Upgrade(w, r, nil)
 	if err != nil {
 		log.Println("error subscribing to websocket:", err)
@@ -58,7 +59,7 @@ func (s *Server) WsSnapshot(w http.ResponseWriter, r *http.Request) {
 	go func(conn *websocket.Conn, s *Server) {
 		var err error
 		for {
-			<-time.After(time.Second * 2)
+			<-time.After(interval)
 			err = conn.WriteJSON(s.Regenbox.Snapshot())
 			if err != nil {
 				if s.Verbose {
