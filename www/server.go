@@ -114,6 +114,35 @@ func (s *Server) Snapshot(w http.ResponseWriter, r *http.Request) {
 	_ = json.NewEncoder(w).Encode(s.Regenbox.Snapshot())
 }
 
+// Static server
+func (s *Server) Static(w http.ResponseWriter, r *http.Request) {
+	s.makeStaticHandler(nil).ServeHTTP(w, r)
+}
+
+func (s *Server) Home(w http.ResponseWriter, r *http.Request) {
+	state := s.Regenbox.State()
+	var tplData = RegenboxData{
+		ListenAddr:  s.ListenAddr,
+		State:       state.String(),
+		ChargeState: "-",
+		Voltage:     "-",
+		Config:      regenbox.Config{},
+	}
+
+	if s.Regenbox != nil {
+		i, err := s.Regenbox.ReadVoltage()
+		if err == nil {
+			tplData.Voltage = fmt.Sprintf("%dmV", i)
+			tplData.ChargeState = s.Regenbox.ChargeState().String()
+		}
+		tplData.Config = s.Regenbox.Config()
+	}
+
+	// set path to home template in request
+	r.URL.Path = "html/home.html"
+	s.makeStaticHandler(tplData).ServeHTTP(w, r)
+}
+
 // makeStaticHandler creates a handler that tries to load r.URL.Path
 // file from s.StaticDir first, then from Assets. It executes successfully
 // loaded template with profided tplData.
@@ -146,35 +175,6 @@ func (s *Server) makeStaticHandler(tplData interface{}) http.Handler {
 		}
 		return
 	})
-}
-
-// Static server
-func (s *Server) Static(w http.ResponseWriter, r *http.Request) {
-	s.makeStaticHandler(nil).ServeHTTP(w, r)
-}
-
-func (s *Server) Home(w http.ResponseWriter, r *http.Request) {
-	state := s.Regenbox.State()
-	var tplData = RegenboxData{
-		ListenAddr:  s.ListenAddr,
-		State:       state.String(),
-		ChargeState: "-",
-		Voltage:     "-",
-		Config:      regenbox.Config{},
-	}
-
-	if s.Regenbox != nil {
-		i, err := s.Regenbox.ReadVoltage()
-		if err == nil {
-			tplData.Voltage = fmt.Sprintf("%dmV", i)
-			tplData.ChargeState = s.Regenbox.ChargeState().String()
-		}
-		tplData.Config = s.Regenbox.Config()
-	}
-
-	// set path to home template in request
-	r.URL.Path = "html/home.html"
-	s.makeStaticHandler(tplData).ServeHTTP(w, r)
 }
 
 func (s *Server) Start() {
