@@ -7,8 +7,10 @@ import (
 	"github.com/gorilla/websocket"
 	"github.com/solar3s/goregen/regenbox"
 	"html/template"
+	"io"
 	"log"
 	"net/http"
+	"os"
 	"path"
 	"path/filepath"
 	"time"
@@ -117,7 +119,33 @@ func (s *Server) Snapshot(w http.ResponseWriter, r *http.Request) {
 
 // Static server
 func (s *Server) Static(w http.ResponseWriter, r *http.Request) {
-	s.makeStaticHandler(nil).ServeHTTP(w, r)
+	var err error
+	var tpath = filepath.Join(s.StaticDir, r.URL.Path)
+
+	if f, err := os.Open(tpath); err == nil {
+		defer f.Close()
+		_, err := io.Copy(w, f)
+		if err != nil {
+			serr := fmt.Sprintf("io.Copy %s: %s", tpath, err)
+			log.Println(serr)
+			http.Error(w, serr, 500)
+		}
+		return
+	}
+
+	// try loading asset instead
+	asset, err := Asset(path.Join("static", r.URL.Path))
+	if err != nil {
+		http.NotFound(w, r)
+		return
+	}
+	_, err = w.Write(asset)
+	if err != nil {
+		serr := fmt.Sprintf("w.Write %s: %s", tpath, err)
+		log.Println(serr)
+		http.Error(w, serr, http.StatusInternalServerError)
+	}
+	return
 }
 
 func (s *Server) Home(w http.ResponseWriter, r *http.Request) {
@@ -141,13 +169,13 @@ func (s *Server) Home(w http.ResponseWriter, r *http.Request) {
 
 	// set path to home template in request
 	r.URL.Path = "html/home.html"
-	s.makeStaticHandler(tplData).ServeHTTP(w, r)
+	s.makeTplHandler(tplData).ServeHTTP(w, r)
 }
 
 // makeStaticHandler creates a handler that tries to load r.URL.Path
 // file from s.StaticDir first, then from Assets. It executes successfully
 // loaded template with profided tplData.
-func (s *Server) makeStaticHandler(tplData interface{}) http.Handler {
+func (s *Server) makeTplHandler(tplData interface{}) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		var err error
 		var tpath = filepath.Join(s.StaticDir, r.URL.Path)
@@ -164,14 +192,18 @@ func (s *Server) makeStaticHandler(tplData interface{}) http.Handler {
 			}
 			tpl2, err = tpl.Parse(string(asset))
 			if err != nil {
-				http.Error(w, fmt.Sprintf("error parsing %s template: %s", r.URL.Path, err), http.StatusInternalServerError)
+				serr := fmt.Sprintf("error parsing %s template: %s", r.URL.Path, err)
+				log.Println(serr)
+				http.Error(w, serr, http.StatusInternalServerError)
 				return
 			}
 		}
 
 		err = tpl2.ExecuteTemplate(w, tname, tplData)
 		if err != nil {
-			http.Error(w, fmt.Sprintf("error executing %s template: %s", r.URL.Path, err), http.StatusInternalServerError)
+			serr := fmt.Sprintf("error executing %s template: %s", r.URL.Path, err)
+			log.Println(serr)
+			http.Error(w, serr, http.StatusInternalServerError)
 			return
 		}
 		return
