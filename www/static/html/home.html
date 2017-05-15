@@ -8,9 +8,10 @@
 			border-spacing: 15px 3px;
 		}
 	</style>
+	<script type="text/javascript" src="/static/lib/d3.min.js"></script>
 	<script>
 		function subscribeState() {
-			var ws = new WebSocket("ws://{{.ListenAddr}}/subscribe/snapshot");
+			var ws = new WebSocket("ws://{{.ListenAddr}}/subscribe/snapshot?poll=1s");
 			ws.onopen = function(e) {
 				 console.log('open', e);
 			};
@@ -18,12 +19,14 @@
 				console.log('error', e);
 			};
 			ws.onmessage = function(e) {
-				console.log('data', e.data);
+				var v = JSON.parse(e.data);
+				d3.selectAll('.vVoltage').html(v["Voltage"] + "mV");
 			};
 			ws.onclose = function(e) {
 				console.log('close', e);
 			}
 		}
+		subscribeState();
 	</script>
 </head>
 <body>
