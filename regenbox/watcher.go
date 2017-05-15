@@ -64,7 +64,7 @@ func (w *Watcher) WatchConn() {
 		case Connected:
 		// pass
 		default:
-			conn, err := FindSerial(nil)
+			conn, err := FindSerial(nil, w.rbox.Conn)
 			if err != nil {
 				// high-verbosity log
 				break

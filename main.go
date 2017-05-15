@@ -27,6 +27,8 @@ var (
 	cfg     = flag.String("config", "", "path to config, defaults to <root>/config.toml")
 	verbose = flag.Bool("verbose", false, "higher verbosity")
 	debug   = flag.Bool("debug", false, "enable debug mode")
+
+	winx = flag.Duration("winx", time.Millisecond*50, "patch duration for buggy windox read-flusher")
 )
 
 func UserHomeDir() string {
@@ -92,8 +94,17 @@ func init() {
 
 func main() {
 	rbox, err := regenbox.NewRegenBox(conn, &rbCfg)
-	if err != nil {
+	if err == regenbox.ErrNoSerialPortFound {
+		log.Println("no regenbox detected")
+	} else if err != nil {
 		log.Println("error initializing regenbox connection:", err)
+	}
+	if rbox.Conn == nil {
+		rbox.Conn = &regenbox.SerialConnection{
+			WinxPatch:    *winx,
+			ReadTimeout:  regenbox.DefaultTimeout,
+			WriteTimeout: regenbox.DefaultTimeout,
+		}
 	}
 
 	server = &www.Server{

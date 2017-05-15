@@ -1,6 +1,7 @@
 package regenbox
 
 import (
+	"bytes"
 	"errors"
 	"fmt"
 	"go.bug.st/serial.v1"
@@ -19,11 +20,15 @@ var DefaultSerialConfig = &serial.Mode{
 	StopBits: serial.OneStopBit,
 }
 
-var DefaultTimeout = time.Second
+var DefaultTimeout = 250 * time.Millisecond
 
 type SerialConnection struct {
 	ReadTimeout  time.Duration
 	WriteTimeout time.Duration
+
+	// used for siphonning port after a read on
+	// windows, somehow read operations aren't atomic there..
+	WinxPatch time.Duration
 
 	serial.Port
 	path   string
@@ -79,6 +84,16 @@ func (sc *SerialConnection) Read() (b []byte, err error) {
 	case <-time.After(sc.ReadTimeout):
 		err = fmt.Errorf("read timeout (%s)", sc.ReadTimeout)
 	}
+	// flush while you can
+	buf := bytes.NewBuffer(b)
+	for {
+		select {
+		case b2 := <-sc.rdChan:
+			buf.Write(b2)
+		case <-time.After(sc.WinxPatch):
+			return buf.Bytes(), nil
+		}
+	}
 	return b, err
 }
 
@@ -128,6 +143,7 @@ func (sc *SerialConnection) readRoutine() {
 	for {
 		b := make([]byte, 32)
 		i, err := sc.Port.Read(b)
+		log.Printf("debug: port.Read %d bytes '0x%x'", i, b[:i])
 		select {
 		case sc.rdChan <- b[:i]:
 		case <-sc.Closed():
@@ -160,7 +176,15 @@ func (sc *SerialConnection) writeRoutine() {
 
 // FindSerial tries to connect to first available serial port (platform independant hopefully).
 // If config is nil, DefaultSerialMode is used.
-func FindSerial(config *serial.Mode) (*SerialConnection, error) {
+func FindSerial(config *serial.Mode, old *SerialConnection) (*SerialConnection, error) {
+	sc := old
+	if sc == nil {
+		sc = &SerialConnection{
+			ReadTimeout:  DefaultTimeout,
+			WriteTimeout: DefaultTimeout,
+			WinxPatch:    time.Millisecond * 20,
+		}
+	}
 	ports, err := serial.GetPortsList()
 	if err != nil {
 		return nil, err
@@ -174,8 +198,9 @@ func FindSerial(config *serial.Mode) (*SerialConnection, error) {
 		if err == nil {
 			log.Printf("trying \"%s\"...", v)
 			conn := NewSerial(port, config, v)
-			conn.ReadTimeout = time.Millisecond * 250
-			conn.WriteTimeout = time.Millisecond * 250
+			conn.ReadTimeout = sc.ReadTimeout
+			conn.WriteTimeout = sc.WriteTimeout
+			conn.WinxPatch = sc.WinxPatch
 			conn.Start()
 			// create a temporary box to test connection
 			rb := &RegenBox{Conn: conn, config: new(Config), state: Connected}

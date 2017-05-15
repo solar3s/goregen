@@ -96,7 +96,7 @@ func NewConfig() *Config {
 
 func NewRegenBox(conn *SerialConnection, cfg *Config) (rb *RegenBox, err error) {
 	if conn == nil {
-		conn, err = FindSerial(nil)
+		conn, err = FindSerial(nil, conn)
 	}
 	if cfg == nil {
 		cfg = NewConfig()
