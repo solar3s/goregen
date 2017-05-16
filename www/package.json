@@ -1,0 +1,25 @@
+{
+  "name": "goregen",
+  "version": "0.1.0",
+  "description": "regenbox web remote controller",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/solar3s/goregen.git"
+  },
+  "keywords": [
+    "regenbox",
+    "arduino",
+    "free",
+    "energy",
+    "diy"
+  ],
+  "author": "rkj",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/solar3s/goregen/issues"
+  },
+  "homepage": "https://github.com/solar3s/goregen#readme",
+  "dependencies": {
+    "d3": "^4.8.0"
+  }
+}
