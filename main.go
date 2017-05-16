@@ -114,5 +114,15 @@ func main() {
 	fmt.Println()
 	log.Printf("signal: %s", sig.String())
 	log.Println("stopping regenbox")
-	server.Regenbox.Stop()
+
+	cleanExit := make(chan struct{})
+	go func() {
+		server.Regenbox.Stop()
+		close(cleanExit)
+	}()
+	select {
+	case <-time.After(time.Second * 10):
+		log.Panicln("no clean exit after 10sec, please report to https://github.com/solar3s/goregen")
+	case <-cleanExit:
+	}
 }
