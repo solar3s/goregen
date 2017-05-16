@@ -109,8 +109,9 @@ func (sc *SerialConnection) Close() error {
 	default:
 	}
 	close(sc.closeChan)
+	err := sc.Port.Close()
 	sc.wg.Wait()
-	return sc.Port.Close()
+	return err
 }
 
 // Closed exposes <-sc.closeChan, which is closed if
