@@ -23,7 +23,7 @@ var (
 
 var (
 	device  = flag.String("dev", "", "path to serial port, if empty it will be searched automatically")
-	root    = flag.String("root", "", "path to goregen's config files, defaults to $HOME/goregen")
+	root    = flag.String("root", "~/.goregen", "path to goregen's config files, defaults to $HOME/goregen")
 	cfg     = flag.String("config", "", "path to config, defaults to <root>/config.toml")
 	verbose = flag.Bool("verbose", false, "higher verbosity")
 	debug   = flag.Bool("debug", false, "enable debug mode")
@@ -51,8 +51,8 @@ func init() {
 		conn.Start()
 	}
 
-	if *root == "" {
-		*root = filepath.Join(UserHomeDir(), "goregen")
+	if *root == "" || *root == "~/.goregen" {
+		*root = filepath.Join(UserHomeDir(), ".goregen")
 	}
 	for _, v := range []string{*root} {
 		err := os.MkdirAll(v, 0755)
