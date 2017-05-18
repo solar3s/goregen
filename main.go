@@ -110,9 +110,8 @@ func main() {
 
 	trap := make(chan os.Signal)
 	signal.Notify(trap, os.Kill, os.Interrupt)
-	sig := <-trap
+	<-trap
 	fmt.Println()
-	log.Printf("signal: %s", sig.String())
 	log.Println("stopping regenbox")
 
 	cleanExit := make(chan struct{})
@@ -122,7 +121,7 @@ func main() {
 	}()
 	select {
 	case <-time.After(time.Second * 10):
-		log.Panicln("no clean exit after 10sec, please report to https://github.com/solar3s/goregen")
+		log.Panicln("no clean exit after 10sec, please report panic log to https://github.com/solar3s/goregen/issues")
 	case <-cleanExit:
 	}
 }
