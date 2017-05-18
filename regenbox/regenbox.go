@@ -50,7 +50,6 @@ type Snapshot struct {
 }
 
 type Config struct {
-	OhmValue      int           // Value of charge resstance in ohm, usually from 10 to 30ohm
 	Mode          Mode          // Auto-mode lets the box do charge cycles using the following config values
 	NbHalfCycles  int           // In auto-mode: number of half-cycles to do before halting auto-mode (0: no-limit holdem)
 	UpDuration    time.Duration // In auto-mode: maximum time for an up-cycle before taking action (?)
@@ -74,7 +73,6 @@ type RegenBox struct {
 }
 
 var DefaultConfig = Config{
-	OhmValue:      20,
 	Mode:          ChargeOnly,
 	NbHalfCycles:  10,
 	UpDuration:    time.Hour * 2,
@@ -86,12 +84,8 @@ var DefaultConfig = Config{
 }
 
 func NewConfig() *Config {
-	return &Config{
-		OhmValue: 20, Mode: AutoRun, NbHalfCycles: 0,
-		UpDuration: time.Hour * 12, DownDuration: time.Hour * 12,
-		TopVoltage: 1450, BottomVoltage: 850,
-		IntervalSec: time.Minute,
-	}
+	var cfg = DefaultConfig
+	return &cfg
 }
 
 func NewRegenBox(conn *SerialConnection, cfg *Config) (rb *RegenBox, err error) {
