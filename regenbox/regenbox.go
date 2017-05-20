@@ -123,21 +123,24 @@ func (rb *RegenBox) TestConnection() (_ time.Duration, err error) {
 
 // Starts a detached routine. To stop it, call StopAutoRun()
 func (rb *RegenBox) Start() {
+	logChargeState := func(i int) {
+		log.Printf("autorun: %s (%d)", rb.chargeState, i)
+	}
+
 	rb.autorunCh = make(chan struct{})
 	rb.wg.Add(1)
-	if (rb.config.Mode == ChargeOnly) || rb.config.ChargeFirst {
+	if (rb.config.Mode == Charger) || rb.config.ChargeFirst {
 		rb.chargeState = Charging
-		log.Println("auto-run: charging")
 	} else {
 		rb.chargeState = Discharging
-		log.Println("auto-run: discharging")
 	}
+	logChargeState(0)
 	go func() {
 		defer func() {
 			rb.autorunCh = nil // avoid closing of closed chan
 			rb.wg.Done()
 
-			log.Println("AutoRun is out, setting idle mode")
+			log.Println("autorun out, setting idle mode")
 			err := rb.SetIdle()
 			if err != nil {
 				log.Println("in SetIdle():", err)
@@ -145,15 +148,9 @@ func (rb *RegenBox) Start() {
 		}()
 
 		var sn Snapshot
-		var halfCycles int
+		var halfCycles int = 1
 		var t0 = time.Now()
 		for {
-			select {
-			case <-rb.autorunCh:
-				return
-			case <-time.After(rb.config.IntervalSec):
-			}
-
 			// force charge state, can't hurt
 			err := rb.SetChargeMode(byte(rb.chargeState))
 			if err != nil {
@@ -172,15 +169,15 @@ func (rb *RegenBox) Start() {
 			if rb.chargeState == Discharging {
 				if sn.Voltage <= rb.config.BottomVoltage {
 					log.Printf("autorun: %dV reached bottom value", rb.config.BottomVoltage)
-					if rb.config.Mode == DischargeOnly {
+					if rb.config.Mode == Discharger {
 						log.Println("finished discharging battery (discharge only)")
 						return
 					}
 					err := rb.SetCharge()
-					log.Println("autorun: charging")
 					if err != nil {
 						log.Println("in rb.SetCharge:", err)
 					} else {
+						logChargeState(halfCycles)
 						t0 = time.Now()
 						halfCycles++
 					}
@@ -194,15 +191,15 @@ func (rb *RegenBox) Start() {
 			if rb.chargeState == Charging {
 				if sn.Voltage >= rb.config.TopVoltage {
 					log.Printf("autorun: %dV reached top limit", rb.config.TopVoltage)
-					if rb.config.Mode == ChargeOnly {
+					if rb.config.Mode == Charger {
 						log.Println("finished charging battery (charge only)")
 						return
 					}
 					err := rb.SetDischarge()
-					log.Println("autorun: discharging")
 					if err != nil {
 						log.Println("in rb.SetDischarge:", err)
 					} else {
+						logChargeState(halfCycles)
 						t0 = time.Now()
 						halfCycles++
 					}
@@ -216,6 +213,12 @@ func (rb *RegenBox) Start() {
 			if rb.config.NbHalfCycles > 0 && halfCycles >= rb.config.NbHalfCycles {
 				log.Printf("reached target %d half-cycles", rb.config.NbHalfCycles)
 				return
+			}
+
+			select {
+			case <-rb.autorunCh:
+				return
+			case <-time.After(rb.config.IntervalSec):
 			}
 		}
 	}()
