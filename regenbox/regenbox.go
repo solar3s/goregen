@@ -11,35 +11,31 @@ import (
 var ErrEmptyRead error = errors.New("message was empty")
 var ErrDisconnected error = errors.New("no connection available")
 
-//go:generate stringer -type=ChargeState
-type ChargeState int
+//go:generate stringer -type=State,ChargeState,BotMode -output=types_string.go
+type State byte
+type ChargeState byte
+type BotMode byte
 
 const (
-	Idle        ChargeState = ChargeState(ModeIdle)
-	Charging    ChargeState = ChargeState(ModeCharge)
-	Discharging ChargeState = ChargeState(ModeDischarge)
+	Idle ChargeState = ChargeState(iota)
+	Charging
+	Discharging
 )
 
-//go:generate stringer -type=State
-type State int
-
 const (
-	Disconnected    State = State(0)
-	Connected       State = State(1)
-	WriteError      State = State(2)
-	ReadError       State = State(3)
-	UnexpectedError State = State(4)
-	NilBox          State = State(5)
+	Disconnected State = State(iota)
+	Connected
+	WriteError
+	ReadError
+	UnexpectedError
+	NilBox
 )
 
-//go:generate stringer -type=Mode
-type Mode int
-
 const (
-	Manual        Mode = Mode(0)
-	DischargeOnly Mode = Mode(1) // Discharge until BottomVoltage is reached, then idle
-	ChargeOnly    Mode = Mode(2) // Charge until TopVoltage is reached, then idle
-	AutoRun       Mode = Mode(3) // Do cycles up to NbCycles between Bottom & TopValues, then idle
+	Manual     BotMode = BotMode(iota)
+	Charger            // Charge until TopVoltage is reached, then idle
+	Discharger         // Discharge until BottomVoltage is reached, then idle
+	Cycler             // Do cycles up to NbCycles between Bottom & TopValues, then idle
 )
 
 type Snapshot struct {
@@ -50,7 +46,7 @@ type Snapshot struct {
 }
 
 type Config struct {
-	Mode          Mode          // Auto-mode lets the box do charge cycles using the following config values
+	Mode          BotMode       // Auto-mode lets the box do charge cycles using the following config values
 	NbHalfCycles  int           // In auto-mode: number of half-cycles to do before halting auto-mode (0: no-limit holdem)
 	UpDuration    time.Duration // In auto-mode: maximum time for an up-cycle before taking action (?)
 	DownDuration  time.Duration // In auto-mode: maximum time for a down-cycle before taking action (?)
@@ -73,7 +69,7 @@ type RegenBox struct {
 }
 
 var DefaultConfig = Config{
-	Mode:          ChargeOnly,
+	Mode:          Charger,
 	NbHalfCycles:  10,
 	UpDuration:    time.Hour * 2,
 	DownDuration:  time.Hour * 2,
@@ -330,6 +326,20 @@ func (rb *RegenBox) State() State {
 
 // SetChargeMode sends mode instruction to regenbox.
 func (rb *RegenBox) SetChargeMode(mode byte) error {
+	// wonk conversions because ChargeState & protocol's
+	// mode bytes aren't compatible
+	chState := ChargeState(mode + 50)
+	switch chState {
+	case Idle:
+		mode = byte(ModeIdle)
+	case Charging:
+		mode = byte(ModeCharge)
+	case Discharging:
+		mode = byte(ModeDischarge)
+	default:
+		chState = ChargeState(mode)
+	}
+
 	rb.Lock()
 	_, err := rb.talk(mode)
 	rb.Unlock()
@@ -337,7 +347,7 @@ func (rb *RegenBox) SetChargeMode(mode byte) error {
 		return err
 	}
 	// no error, save state to box only now.
-	rb.chargeState = ChargeState(mode)
+	rb.chargeState = chState
 	return nil
 }
 
