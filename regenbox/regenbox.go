@@ -2,6 +2,7 @@ package regenbox
 
 import (
 	"errors"
+	"github.com/rkjdid/util"
 	"log"
 	"strconv"
 	"sync"
@@ -48,11 +49,11 @@ type Snapshot struct {
 type Config struct {
 	Mode          BotMode       // Auto-mode lets the box do charge cycles using the following config values
 	NbHalfCycles  int           // In auto-mode: number of half-cycles to do before halting auto-mode (0: no-limit holdem)
-	UpDuration    time.Duration // In auto-mode: maximum time for an up-cycle before taking action (?)
-	DownDuration  time.Duration // In auto-mode: maximum time for a down-cycle before taking action (?)
+	UpDuration    util.Duration // In auto-mode: maximum time for an up-cycle before taking action (?)
+	DownDuration  util.Duration // In auto-mode: maximum time for a down-cycle before taking action (?)
 	TopVoltage    int           // In auto-mode: target top voltage before switching charge-cycle
 	BottomVoltage int           // In auto-mode: target bottom voltage before switching charge-cycle
-	IntervalSec   time.Duration // In auto-mode: sleep interval in second between each measure
+	IntervalSec   util.Duration // In auto-mode: sleep interval in second between each measure
 	ChargeFirst   bool          // In auto-mode: start auto-run with a charge-cycle (false: discharge)
 }
 
@@ -71,11 +72,11 @@ type RegenBox struct {
 var DefaultConfig = Config{
 	Mode:          Charger,
 	NbHalfCycles:  10,
-	UpDuration:    time.Hour * 2,
-	DownDuration:  time.Hour * 2,
+	UpDuration:    util.Duration(time.Hour * 2),
+	DownDuration:  util.Duration(time.Hour * 2),
 	TopVoltage:    1410,
 	BottomVoltage: 900,
-	IntervalSec:   time.Second * 10,
+	IntervalSec:   util.Duration(time.Second * 10),
 	ChargeFirst:   true,
 }
 
@@ -181,7 +182,7 @@ func (rb *RegenBox) Start() {
 						t0 = time.Now()
 						halfCycles++
 					}
-				} else if time.Since(t0) >= rb.config.DownDuration {
+				} else if time.Since(t0) >= time.Duration(rb.config.DownDuration) {
 					log.Printf("autorun: couldn't discharge battery to %dmV in %s, battery's dead or something's wrong",
 						rb.config.BottomVoltage, rb.config.DownDuration)
 					return
@@ -203,7 +204,7 @@ func (rb *RegenBox) Start() {
 						t0 = time.Now()
 						halfCycles++
 					}
-				} else if time.Since(t0) >= rb.config.UpDuration {
+				} else if time.Since(t0) >= time.Duration(rb.config.UpDuration) {
 					log.Printf("couldn't charge battery to %dmV in %s, battery's dead or something's wrong",
 						rb.config.TopVoltage, rb.config.UpDuration)
 					return
@@ -218,7 +219,7 @@ func (rb *RegenBox) Start() {
 			select {
 			case <-rb.autorunCh:
 				return
-			case <-time.After(rb.config.IntervalSec):
+			case <-time.After(time.Duration(rb.config.IntervalSec)):
 			}
 		}
 	}()
