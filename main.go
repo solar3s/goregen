@@ -3,9 +3,9 @@ package main
 import (
 	"flag"
 	"fmt"
+	"github.com/rkjdid/util"
 	"github.com/solar3s/goregen/regenbox"
 	"github.com/solar3s/goregen/www"
-	"jdid.co/bitbot/util"
 	"log"
 	"os"
 	"os/signal"
