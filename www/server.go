@@ -122,6 +122,7 @@ func (s *Server) Static(w http.ResponseWriter, r *http.Request) {
 	var err error
 	var tpath = filepath.Join(s.StaticDir, r.URL.Path)
 
+	// from s.Static folder
 	if f, err := os.Open(tpath); err == nil {
 		defer f.Close()
 		_, err := io.Copy(w, f)
@@ -133,7 +134,7 @@ func (s *Server) Static(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// try loading asset instead
+	// from binary assets
 	asset, err := Asset(path.Join("static", r.URL.Path))
 	if err != nil {
 		http.NotFound(w, r)
