@@ -7,6 +7,12 @@
 		table {
 			border-spacing: 15px 3px;
 		}
+		table.overview td {
+			height: 24px;
+		}
+		.controls {
+			margin: 10px 0 0 15px;
+		}
 	</style>
 	<script type="text/javascript" src="/static/lib/d3.min.js"></script>
 	<script type="text/javascript" src="/static/js/websocket.js"></script>
@@ -21,7 +27,7 @@
 	<h1>Hello Regenbox!</h1>
 	<hr/>
 	<h2>overview</h2>
-	<table>
+	<table class="overview">
 		<tr>
 			<td>State:</td>
 			<td class="v vState">-</td>
@@ -31,7 +37,7 @@
 			<td class="v vChargeState">-</td>
 		</tr>
 		<tr>
-			<td>Tension</td>
+			<td>Tension:</td>
 			<td class="v vVoltage">-</td>
 		</tr>
 		<tr>
@@ -39,6 +45,12 @@
 			<td class="ws">-</td>
 		</tr>
 	</table>
+	<section class="controls">
+		<button class="ctrl cUp cCharge"    onclick="rbCharge();"   >Charge</button>
+		<button class="ctrl cUp cDischarge" onclick="rbDischarge();">Discharge</button>
+		<button class="ctrl cUp cCycle"     onclick="rbCycle();"    >Cycle</button>
+		<button class="ctrl cDown cStop"    onclick="rbStop();"     >Stop</button>
+	</section>
 	<hr>
 	<!--
 	type Config struct {
