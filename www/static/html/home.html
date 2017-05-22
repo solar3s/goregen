@@ -10,31 +10,51 @@
 	</style>
 	<script type="text/javascript" src="/static/lib/d3.min.js"></script>
 	<script>
-		var interval;
+		var wsError;
+		var wsButton = '<button onclick="subscribeSocket();">Reconnect</button>';
+
 		function initSocket(ws) {
+			d3.selectAll('.ws').html('Ok');
 			ws.onerror = function (e) {
-				console.log('error');
+				console.log('websocket error', e);
 			};
 			ws.onmessage = function (e) {
 				var v = JSON.parse(e.data);
-				d3.selectAll('.vVoltage').html(v['Voltage'] + 'mV');
-				d3.selectAll('.vState').html(v['State']);
-				d3.selectAll('.vChargeState').html(v['ChargeState']);
+				var state = v['State'];
+
+				d3.selectAll('.vState').html(state);
+				if (state === 'Connected') {
+					d3.selectAll('.vVoltage').html(v['Voltage'] + 'mV');
+					d3.selectAll('.vChargeState').html(v['ChargeState'])
+				} else {
+					d3.selectAll('.vVoltage').html('-');
+					d3.selectAll('.vChargeState').html('-')
+				}
 			};
 			ws.onclose = function (e) {
-				d3.selectAll('.v').html('restart goregen');
+				d3.selectAll('.vState').html('no connection to goregen');
+				d3.selectAll('.vChargeState').html('-');
+				d3.selectAll('.vVoltage').html('-');
+				d3.selectAll('.ws').html(wsButton);
 				ws.onclose = null;
 				ws.onerror = null;
 				ws.onmessage = null;
-				// retry connecting every 5s
-				interval = setInterval(subscribeSocket, 5000);
 			}
 		}
 
 		function subscribeSocket() {
 			var ws = new WebSocket('ws://{{.ListenAddr}}/subscribe/snapshot?poll=1s');
+			d3.selectAll('.ws').html('connecting...');
+			wsError = setTimeout(function() {
+				var err = 'couldn\'t connect to goregen server, is it running?';
+				console.warn(err);
+				d3.selectAll('.ws').html(err);
+				setTimeout(function() {
+					d3.selectAll('.ws').html(wsButton);
+				}, 5000);
+			}, 1500);
 			ws.onopen = function () {
-				clearInterval(interval);
+				clearInterval(wsError);
 				initSocket(ws);
 			};
 		}
@@ -48,15 +68,19 @@
 	<table>
 		<tr>
 			<td>State:</td>
-			<td class="v vState">{{.State}}</td>
+			<td class="v vState">-</td>
 		</tr>
 		<tr>
 			<td>ChargeState:</td>
-			<td class="v vChargeState">{{.ChargeState}}</td>
+			<td class="v vChargeState">-</td>
 		</tr>
 		<tr>
 			<td>Tension</td>
-			<td class="v vVoltage">{{.Voltage}}</td>
+			<td class="v vVoltage">-</td>
+		</tr>
+		<tr>
+			<td>WebSocket:</td>
+			<td class="ws">-</td>
 		</tr>
 	</table>
 	<hr>
