@@ -353,7 +353,6 @@ func (rb *RegenBox) SetChargeMode(charge byte) error {
 		charge = byte(Discharging)
 	default:
 		charge = byte(Idle)
-		fmt.Println("wut?", mode)
 	}
 
 	rb.Lock()
