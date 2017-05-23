@@ -112,6 +112,8 @@ const (
 // TestConnection sends a ping every testConnPoll,
 // and returns on success or after pingRetries tries.
 func (rb *RegenBox) TestConnection() (_ time.Duration, err error) {
+	rb.Lock()
+	defer rb.Unlock()
 	t0 := time.Now()
 	for i := 0; i < pingRetries; i++ {
 		err = rb.ping()
