@@ -47,7 +47,7 @@ func TestTypesMarshallers(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	expect(t, "Mode_MarshallJSON", string(b), string(expected))
+	expect(t, "BotMode_MarshallJSON", string(b), string(expected))
 }
 
 func TestUnmarshallers(t *testing.T) {
@@ -87,6 +87,6 @@ func TestUnmarshallers(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	} else {
-		expect(t, "ChargeState_UnmarshallJSON", m.String(), Charger.String())
+		expect(t, "BotMode_UnmarshallJSON", m.String(), Charger.String())
 	}
 }
