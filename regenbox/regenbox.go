@@ -329,19 +329,31 @@ func (rb *RegenBox) State() State {
 }
 
 // SetChargeMode sends mode instruction to regenbox.
-func (rb *RegenBox) SetChargeMode(mode byte) error {
-	// wonk conversions because ChargeState & protocol's
-	// mode bytes aren't compatible
-	chState := ChargeState(mode + 50)
-	switch chState {
-	case Idle:
+// TODO THIS IS SHIT cause ModeIdle... Idle/Charging/Discharging are not compatible
+// TODO at least test this t_t
+func (rb *RegenBox) SetChargeMode(charge byte) error {
+	var mode byte
+	switch charge {
+	case byte(Idle):
 		mode = byte(ModeIdle)
-	case Charging:
+	case byte(Charging):
 		mode = byte(ModeCharge)
-	case Discharging:
+	case byte(Discharging):
 		mode = byte(ModeDischarge)
 	default:
-		chState = ChargeState(mode)
+		mode = byte(charge)
+	}
+
+	switch mode {
+	case ModeIdle:
+		charge = byte(Idle)
+	case ModeCharge:
+		charge = byte(Charging)
+	case ModeDischarge:
+		charge = byte(Discharging)
+	default:
+		charge = byte(Idle)
+		fmt.Println("wut?", mode)
 	}
 
 	rb.Lock()
@@ -351,7 +363,7 @@ func (rb *RegenBox) SetChargeMode(mode byte) error {
 		return err
 	}
 	// no error, save state to box only now.
-	rb.chargeState = chState
+	rb.chargeState = ChargeState(charge)
 	return nil
 }
 
