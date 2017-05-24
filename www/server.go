@@ -119,6 +119,22 @@ func (s *Server) Config(w http.ResponseWriter, r *http.Request) {
 	return
 }
 
+func (s *Server) StartRegenbox(w http.ResponseWriter, r *http.Request) {
+	if !s.Regenbox.Stopped() {
+		http.Error(w, "regenbox is already running", http.StatusNotAcceptable)
+	}
+	s.Regenbox.Start()
+	w.Write([]byte("regenbox started"))
+}
+
+func (s *Server) StopRegenbox(w http.ResponseWriter, r *http.Request) {
+	if s.Regenbox.Stopped() {
+		http.Error(w, "regenbox is already stopped", http.StatusNotAcceptable)
+	}
+	s.Regenbox.Stop()
+	w.Write([]byte("regenbox stopped"))
+}
+
 // Snapshot encodes snapshot as json to w.
 func (s *Server) Snapshot(w http.ResponseWriter, r *http.Request) {
 	_ = json.NewEncoder(w).Encode(s.Regenbox.Snapshot())
@@ -244,6 +260,12 @@ func (s *Server) Start() {
 		s.router.Handle("/config",
 			Logger(http.HandlerFunc(s.Config), "config", s.Verbose)).
 			Methods("GET", "POST")
+		s.router.Handle("/start",
+			Logger(http.HandlerFunc(s.StartRegenbox), "start", s.Verbose)).
+			Methods("POST")
+		s.router.Handle("/stop",
+			Logger(http.HandlerFunc(s.StopRegenbox), "stop", s.Verbose)).
+			Methods("POST")
 		s.router.Handle("/snapshot",
 			Logger(http.HandlerFunc(s.Snapshot), "snapshot", s.Verbose)).
 			Methods("GET")
