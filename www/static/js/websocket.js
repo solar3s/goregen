@@ -26,8 +26,8 @@ function initSocket(ws) {
 		var charge = v['ChargeState'];
 		d3.selectAll('.vVoltage').html(v['Voltage'] + 'mV');
 		d3.selectAll('.vChargeState').html(charge);
-		d3.selectAll('.ctrl.cUp').attr('disabled', charge === 'Idle' ? '' : null);
-		d3.selectAll('.ctrl.cDown').attr('disabled', charge !== 'Idle' ? '' : null);
+		d3.selectAll('.ctrl.cUp').attr('disabled', charge !== 'Idle' ? '' : null);
+		d3.selectAll('.ctrl.cDown').attr('disabled', charge === 'Idle' ? '' : null);
 	};
 	ws.onclose = function (e) {
 		d3.selectAll('.vState').html('no connection to goregen');
