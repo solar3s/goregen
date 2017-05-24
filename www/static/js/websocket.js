@@ -19,7 +19,7 @@ function initSocket(ws) {
 		d3.selectAll('.vState').html(state);
 		if (state !== 'Connected') {
 			d3.selectAll('.vVoltage').html('-');
-			// d3.selectAll('.vRawVoltage').html('');
+			d3.selectAll('.vRawVoltage').html('');
 			d3.selectAll('.vChargeState').html('-');
 			d3.selectAll('.ctrl').attr('disabled', '');
 			return;
