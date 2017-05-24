@@ -168,7 +168,7 @@ func (rb *RegenBox) Start() {
 			log.Println(sn)
 			rb.measures = append(rb.measures, sn)
 
-			if sn.State != Connected {
+			if sn.State != Connected || sn.Voltage == 0 {
 				// need error-less state here
 				continue
 			}
