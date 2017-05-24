@@ -126,6 +126,10 @@ func (rb *RegenBox) TestConnection() (_ time.Duration, err error) {
 
 // Starts a detached routine. To stop it, call StopAutoRun()
 func (rb *RegenBox) Start() {
+	if !rb.Stopped() {
+		return
+	}
+
 	logChargeState := func(i int) {
 		log.Printf("autorun: %s (%d)", rb.chargeState, i)
 	}
