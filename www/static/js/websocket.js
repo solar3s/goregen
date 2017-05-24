@@ -1,6 +1,7 @@
 var wsError;
 var wsButton = '<button onclick="subscribeSocket();">Reconnect</button>';
 var listenAddr = 'localhost:3636';
+var once = true;
 
 function setListenAddr(v) {
 	listenAddr = v;
@@ -18,6 +19,7 @@ function initSocket(ws) {
 		d3.selectAll('.vState').html(state);
 		if (state !== 'Connected') {
 			d3.selectAll('.vVoltage').html('-');
+			// d3.selectAll('.vRawVoltage').html('');
 			d3.selectAll('.vChargeState').html('-');
 			d3.selectAll('.ctrl').attr('disabled', '');
 			return;
@@ -25,13 +27,21 @@ function initSocket(ws) {
 
 		var charge = v['ChargeState'];
 		d3.selectAll('.vVoltage').html(v['Voltage'] + 'mV');
+		d3.selectAll('.vRawVoltage').html(v['Voltage']);
 		d3.selectAll('.vChargeState').html(charge);
 		d3.selectAll('.ctrl.cUp').attr('disabled', charge !== 'Idle' ? '' : null);
 		d3.selectAll('.ctrl.cDown').attr('disabled', charge === 'Idle' ? '' : null);
+
+		// start charting from first value
+		if (once) {
+			d3chart.init(Number(v['Voltage']));
+			once = false;
+		}
 	};
 	ws.onclose = function (e) {
 		d3.selectAll('.vState').html('no connection to goregen');
 		d3.selectAll('.vVoltage').html('-');
+		d3.selectAll('.vRawVoltage').html('');
 		d3.selectAll('.vChargeState').html('-');
 		d3.selectAll('.ctrl').attr('disabled', '');
 		d3.selectAll('.ws').html(wsButton);
@@ -44,7 +54,7 @@ function initSocket(ws) {
 function subscribeSocket() {
 	d3.selectAll('.ctrl').attr('disabled', true);
 	d3.selectAll('.ws').html('connecting...');
-	var ws = new WebSocket('ws://' + listenAddr  + '/subscribe/snapshot?poll=1s');
+	var ws = new WebSocket('ws://' + listenAddr	+ '/subscribe/snapshot?poll=1s');
 	wsError = setTimeout(function () {
 		d3.selectAll('.vState').html('no connection to goregen');
 		var err = 'couldn\'t connect to goregen server, is it running?';
