@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/gorilla/mux"
 	"github.com/gorilla/websocket"
+	"github.com/rkjdid/util"
 	"github.com/solar3s/goregen/regenbox"
 	"html/template"
 	"io"
@@ -80,7 +81,8 @@ func (s *Server) WsSnapshot(w http.ResponseWriter, r *http.Request) {
 func (s *Server) Config(w http.ResponseWriter, r *http.Request) {
 	switch r.Method {
 	case http.MethodPost:
-		var cfg regenbox.Config
+		// copy current config, this allows for setting only a subset of the whole config
+		var cfg regenbox.Config = s.Regenbox.Config()
 		err := json.NewDecoder(r.Body).Decode(&cfg)
 		if err != nil {
 			log.Println("error decoding json:", err)
@@ -97,6 +99,11 @@ func (s *Server) Config(w http.ResponseWriter, r *http.Request) {
 			log.Println("error setting config:", err)
 			http.Error(w, "error setting config (internal)", http.StatusInternalServerError)
 			return
+		}
+		// save newly set config
+		err = util.WriteTomlFile(cfg, s.RboxConfig)
+		if err != nil {
+			log.Println("error writing config:", err)
 		}
 		break
 	case http.MethodGet:
