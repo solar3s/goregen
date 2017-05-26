@@ -27,7 +27,7 @@ d3chart.init = function (zeroValue) {
 			return y(d);
 		});
 
-	function tick() {
+	this.tick = function () {
 		var v = Number(d3.select('.vRawVoltage').html());
 		var shift = 0;
 		if (v) {
@@ -36,20 +36,17 @@ d3chart.init = function (zeroValue) {
 		}
 
 		// Redraw the line.
-		d3.select(this)
+		// this === path.line
+		d3.select("path.line")
 			.attr("d", line)
-			.attr("transform", null);
-		// Slide it to the left.
-		d3.active(this)
-			.attr("transform", "translate(" + x(shift) + ",0)")
-			.transition()
-			.on("start", tick);
+			.attr("transform", null)
+			.attr("transform", "translate(" + x(shift) + ",0)");
 
 		if (v) {
 			// Pop the old data point off the front.
 			data.shift();
 		}
-	}
+	};
 
 	g.append("defs").append("clipPath")
 		.attr("id", "clip")
@@ -80,9 +77,5 @@ d3chart.init = function (zeroValue) {
 		.attr("clip-path", "url(#clip)")
 		.append("path")
 		.datum(data)
-		.attr("class", "line")
-		.transition()
-		.duration(15000)
-		.ease(d3.easeLinear)
-		.on("start", tick);
+		.attr("class", "line");
 };

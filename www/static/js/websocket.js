@@ -2,6 +2,7 @@ var wsError;
 var wsButton = '<button onclick="subscribeSocket();">Reconnect</button>';
 var listenAddr = 'localhost:3636';
 var once = true;
+var tick = 15;
 
 function setListenAddr(v) {
 	listenAddr = v;
@@ -37,6 +38,11 @@ function initSocket(ws) {
 			d3chart.init(Number(v['Voltage']));
 			once = false;
 		}
+		if (tick === 15) {
+			tick = 0;
+			d3chart.tick();
+		}
+		tick++;
 	};
 	ws.onclose = function (e) {
 		d3.selectAll('.vState').html('no connection to goregen');
