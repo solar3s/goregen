@@ -26,6 +26,7 @@ var (
 	root    = flag.String("root", "~/.goregen", "path to goregen's config files, defaults to $HOME/goregen")
 	cfg     = flag.String("config", "", "path to config, defaults to <root>/config.toml")
 	verbose = flag.Bool("verbose", false, "higher verbosity")
+	version = flag.Bool("version", false, "print version & exit")
 	debug   = flag.Bool("debug", false, "enable debug mode")
 )
 
@@ -42,6 +43,11 @@ func UserHomeDir() string {
 
 func init() {
 	flag.Parse()
+	if *version {
+		fmt.Printf("goregen %s\n", Version)
+		os.Exit(0)
+	}
+
 	if *device != "" {
 		port, config, err := regenbox.OpenPortName(*device)
 		if err != nil {
@@ -105,6 +111,7 @@ func main() {
 		RootDir:    *root,
 		StaticDir:  static,
 		WsInterval: time.Second * 5,
+		Version:    Version,
 	}
 	server.Start()
 

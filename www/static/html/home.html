@@ -13,6 +13,17 @@
 			box-sizing: border-box;
 		}
 
+		.header {
+			position: relative;
+			width: 100%;
+		}
+
+		.version {
+			position: absolute;
+			right: 15px;
+			bottom: -10px;
+		}
+
 		table {
 			border-spacing: 15px 3px;
 		}
@@ -62,7 +73,10 @@
 	</script>
 </head>
 <body>
-	<h1>Hello Regenbox!</h1>
+	<section class="header">
+		<h1>Hello Regenbox!</h1>
+		<span class="version">{{.Version}}</span>
+	</section>
 	<hr/>
 	<section class="nav">
 		<h2>overview</h2>

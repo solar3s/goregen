@@ -25,6 +25,7 @@ type Server struct {
 	RootDir    string
 	StaticDir  string
 	WsInterval time.Duration
+	Version    string
 
 	Regenbox *regenbox.RegenBox
 
@@ -39,6 +40,7 @@ type RegenboxData struct {
 	ChargeState string
 	Voltage     string
 	Config      regenbox.Config
+	Version     string
 }
 
 func (s *Server) WsSnapshot(w http.ResponseWriter, r *http.Request) {
@@ -180,6 +182,7 @@ func (s *Server) Home(w http.ResponseWriter, r *http.Request) {
 		ChargeState: "-",
 		Voltage:     "-",
 		Config:      regenbox.Config{},
+		Version:     s.Version,
 	}
 
 	if s.Regenbox != nil {
