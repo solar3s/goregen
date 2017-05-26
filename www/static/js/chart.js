@@ -1,9 +1,9 @@
 var d3chart = {};
-d3chart.init = function(zeroValue) {
-  var n = 2400;
-  var data = [];
-  while (n--) data.push(zeroValue);
-  n = 2400;
+d3chart.init = function (zeroValue) {
+	var n = 2400;
+	var data = [];
+	while (n--) data.push(zeroValue);
+	n = 2400;
 
 	var svg = d3.select("svg");
 	var margin = {top: 20, right: 20, bottom: 50, left: 40};
@@ -27,29 +27,29 @@ d3chart.init = function(zeroValue) {
 			return y(d);
 		});
 
-  function tick() {
-    var v = Number(d3.select('.vRawVoltage').html());
-    var shift = 0;
-    if (v) {
-      data.push(v);
-      shift = -1;
-    }
+	function tick() {
+		var v = Number(d3.select('.vRawVoltage').html());
+		var shift = 0;
+		if (v) {
+			data.push(v);
+			shift = -1;
+		}
 
-    // Redraw the line.
-    d3.select(this)
-      .attr("d", line)
-      .attr("transform", null);
-    // Slide it to the left.
-    d3.active(this)
-      .attr("transform", "translate(" + x(shift) + ",0)")
-      .transition()
-      .on("start", tick);
+		// Redraw the line.
+		d3.select(this)
+			.attr("d", line)
+			.attr("transform", null);
+		// Slide it to the left.
+		d3.active(this)
+			.attr("transform", "translate(" + x(shift) + ",0)")
+			.transition()
+			.on("start", tick);
 
-    if (v) {
-      // Pop the old data point off the front.
-      data.shift();
-    }
-  }
+		if (v) {
+			// Pop the old data point off the front.
+			data.shift();
+		}
+	}
 
 	g.append("defs").append("clipPath")
 		.attr("id", "clip")
@@ -60,17 +60,17 @@ d3chart.init = function(zeroValue) {
 	g.append("g")
 		.attr("class", "axis axis--x")
 		.attr("transform", "translate(0," + y(800) + ")")
-		.call(d3.axisBottom(x).tickFormat(function(d) {
-		  if ((n - d) === 0) {
-		    return 'now';
-      }
-			return ((n-d)/(60*4)).toFixed(1) + 'h ago';
+		.call(d3.axisBottom(x).tickFormat(function (d) {
+			if ((n - d) === 0) {
+				return 'now';
+			}
+			return ((n - d) / (60 * 4)).toFixed(1) + 'h ago';
 		}))
-      .selectAll("text")
-      .style("text-anchor", "end")
-      .attr("dx", "-.8em")
-      .attr("dy", ".15em")
-      .attr("transform", "rotate(-45)");
+		.selectAll("text")
+		.style("text-anchor", "end")
+		.attr("dx", "-.8em")
+		.attr("dy", ".15em")
+		.attr("transform", "rotate(-45)");
 
 	g.append("g")
 		.attr("class", "axis axis--y")

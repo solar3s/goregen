@@ -54,7 +54,7 @@ function initSocket(ws) {
 function subscribeSocket() {
 	d3.selectAll('.ctrl').attr('disabled', true);
 	d3.selectAll('.ws').html('connecting...');
-	var ws = new WebSocket('ws://' + listenAddr	+ '/subscribe/snapshot?poll=1s');
+	var ws = new WebSocket('ws://' + listenAddr + '/subscribe/snapshot?poll=1s');
 	wsError = setTimeout(function () {
 		d3.selectAll('.vState').html('no connection to goregen');
 		var err = 'couldn\'t connect to goregen server, is it running?';
