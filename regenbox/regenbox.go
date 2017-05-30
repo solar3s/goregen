@@ -106,7 +106,7 @@ func NewRegenBox(conn *SerialConnection, cfg *Config) (rb *RegenBox, err error) 
 }
 
 const (
-	pingRetries = 12
+	pingRetries = 30
 )
 
 // TestConnection sends a ping every testConnPoll,

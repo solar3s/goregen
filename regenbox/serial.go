@@ -175,13 +175,15 @@ func FindSerial(config *serial.Mode) (*SerialConnection, error) {
 		if err == nil {
 			log.Printf("trying \"%s\"...", v)
 			conn := NewSerial(port, config, v)
-			conn.ReadTimeout = time.Millisecond * 250
-			conn.WriteTimeout = time.Millisecond * 250
+			conn.ReadTimeout = time.Millisecond * 50
+			conn.WriteTimeout = time.Millisecond * 50
 			conn.Start()
 			// create a temporary box to test connection
 			rb := &RegenBox{Conn: conn, config: new(Config), state: Connected}
 			t, err := rb.TestConnection()
 			if err == nil {
+				conn.ReadTimeout = DefaultTimeout
+				conn.WriteTimeout = DefaultTimeout
 				log.Printf("connected to \"%s\" in %s", v, t)
 				return conn, nil
 			} else {
