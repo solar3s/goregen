@@ -122,7 +122,7 @@ func main() {
 	signal.Notify(trap, os.Kill, os.Interrupt)
 	<-trap
 	fmt.Println()
-	log.Println("stopping regenbox")
+	log.Println("quit received...")
 
 	cleanExit := make(chan struct{})
 	go func() {

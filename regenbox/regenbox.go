@@ -145,8 +145,7 @@ func (rb *RegenBox) Start() {
 	logChargeState(0)
 	go func() {
 		defer func() {
-
-			log.Println("autorun out, setting idle mode")
+			log.Println("autorun: out, setting idle mode")
 			err := rb.SetIdle()
 			if err != nil {
 				log.Println("in SetIdle():", err)
@@ -237,7 +236,6 @@ func (rb *RegenBox) Stop() {
 	if rb.Stopped() {
 		return
 	}
-	log.Println("stopping AutoRun...")
 	close(rb.autorunCh)
 	rb.wg.Wait()
 }
