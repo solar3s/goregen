@@ -2,6 +2,7 @@ package regenbox
 
 import (
 	"log"
+	"sync"
 	"time"
 )
 
@@ -9,6 +10,7 @@ type Watcher struct {
 	rbox   *RegenBox
 	cfg    *WatcherConfig
 	stopCh chan struct{}
+	wg     sync.WaitGroup
 }
 
 type WatcherConfig struct {
@@ -35,44 +37,49 @@ func (w *Watcher) Stop() {
 	}
 	log.Println("stopping conn watcher")
 	close(w.stopCh)
+	w.wg.Wait()
 }
 
 func (w *Watcher) WatchConn() {
 	log.Printf("starting conn watcher (poll rate: %s)", w.cfg.ConnPollRate)
 	w.stopCh = make(chan struct{})
-	var (
-		st  State = w.rbox.State()
-		err error
-	)
-	for {
-		select {
-		case <-time.After(w.cfg.ConnPollRate):
-		case <-w.stopCh:
-			w.stopCh = nil
-			return
-		}
-
-		w.rbox.Lock()
-		err = w.rbox.ping()
-		if err != nil && st == Connected {
-			log.Printf("closing serial connection to \"%s\": %s", w.rbox.Conn.path, err)
-			w.rbox.Conn.Close()
-		}
-		st = w.rbox.State()
-
-		switch st {
-		case Connected:
-		// pass
-		default:
-			conn, err := FindSerial(nil)
-			if err != nil {
-				// high-verbosity log
-				break
+	w.wg.Add(1)
+	go func() {
+		defer w.wg.Done()
+		var (
+			st  State = w.rbox.State()
+			err error
+		)
+		for {
+			select {
+			case <-time.After(w.cfg.ConnPollRate):
+			case <-w.stopCh:
+				w.stopCh = nil
+				return
 			}
-			w.rbox.Conn = conn
-			w.rbox.state = Connected
-			st = Connected
+
+			w.rbox.Lock()
+			err = w.rbox.ping()
+			if err != nil && st == Connected {
+				log.Printf("closing serial connection to \"%s\": %s", w.rbox.Conn.path, err)
+				w.rbox.Conn.Close()
+			}
+			st = w.rbox.State()
+
+			switch st {
+			case Connected:
+			// pass
+			default:
+				conn, err := FindSerial(nil)
+				if err != nil {
+					// high-verbosity log
+					break
+				}
+				w.rbox.Conn = conn
+				w.rbox.state = Connected
+				st = Connected
+			}
+			w.rbox.Unlock()
 		}
-		w.rbox.Unlock()
-	}
+	}()
 }
