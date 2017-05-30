@@ -102,6 +102,9 @@ func main() {
 		log.Println("error initializing regenbox connection:", err)
 	}
 
+	watcher := regenbox.NewWatcher(rbox, regenbox.DefaultWatcherConfig)
+	watcher.WatchConn()
+
 	server = &www.Server{
 		ListenAddr: "localhost:3636",
 		Regenbox:   rbox,
@@ -124,6 +127,8 @@ func main() {
 	cleanExit := make(chan struct{})
 	go func() {
 		server.Regenbox.Stop()
+		watcher.Stop()
+
 		close(cleanExit)
 	}()
 	select {

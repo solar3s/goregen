@@ -250,10 +250,6 @@ func (s *Server) Start() {
 	s.router = mux.NewRouter()
 
 	go func() {
-		watcher := regenbox.NewWatcher(s.Regenbox, regenbox.DefaultWatcherConfig)
-		watcher.WatchConn()
-	}()
-	go func() {
 		s.router.PathPrefix("/static/").Handler(
 			http.StripPrefix("/static/", Logger(http.HandlerFunc(s.Static), "static", s.Verbose))).
 			Methods("GET")
