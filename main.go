@@ -126,8 +126,9 @@ func main() {
 
 	cleanExit := make(chan struct{})
 	go func() {
-		server.Regenbox.Stop()
 		watcher.Stop()
+		rbox.Stop()
+		rbox.Conn.Close()
 
 		close(cleanExit)
 	}()

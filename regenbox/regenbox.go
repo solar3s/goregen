@@ -125,6 +125,7 @@ func (rb *RegenBox) TestConnection() (_ time.Duration, err error) {
 }
 
 // Starts a detached routine. To stop it, call StopAutoRun()
+// todo, this should return error
 func (rb *RegenBox) Start() {
 	if !rb.Stopped() {
 		return
@@ -144,14 +145,14 @@ func (rb *RegenBox) Start() {
 	logChargeState(0)
 	go func() {
 		defer func() {
-			rb.autorunCh = nil // avoid closing of closed chan
-			rb.wg.Done()
 
 			log.Println("autorun out, setting idle mode")
 			err := rb.SetIdle()
 			if err != nil {
 				log.Println("in SetIdle():", err)
 			}
+			rb.autorunCh = nil // avoid closing of closed chan
+			rb.wg.Done()
 		}()
 
 		var sn Snapshot
