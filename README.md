@@ -1,7 +1,10 @@
 goregen
 =======
 
-Golang implementation for controlling regenbox
+/!\ goregen is under active development, and this readme is not up to date. Stay tuned!
+
+Golang implementation for controlling regenbox. To get information about the project, or getting early beta access:
+[https://regenbox.org/](https://regenbox.org/)
 
 Install [firmware/firmware.ino](https://github.com/solar3s/goregen/blob/master/firmware/firmware.ino)
 on arduino & run code
