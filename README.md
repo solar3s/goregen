@@ -1,6 +1,8 @@
 goregen
 =======
 
+For information about the __regenbox__ project or to pre-order hardware, go to https://regenbox.org/
+
 `goregen` is the web remote control interface for your `regenbox`
 
 ![goregen](https://cloud.githubusercontent.com/assets/1699009/26520906/429cb2ca-42dc-11e7-948a-8e51deb05e38.png)
