@@ -28,6 +28,8 @@ var (
 	verbose = flag.Bool("verbose", false, "higher verbosity")
 	version = flag.Bool("version", false, "print version & exit")
 	debug   = flag.Bool("debug", false, "enable debug mode")
+	assets  = flag.Bool("assets", false, "extract static assets to <root>/static, if true, extracted assets "+
+		"also take precedence over binary assets\n\tthis option is useful for doing live tests on front-end")
 )
 
 func UserHomeDir() string {
@@ -85,10 +87,12 @@ func init() {
 	}
 
 	// restore static assets
-	static = filepath.Join(*root, "static")
-	err = www.RestoreAssets(*root, "static")
-	if err != nil {
-		log.Fatalf("couldn't restore static assets in \"%s\": %s", static, err)
+	if *assets {
+		static = filepath.Join(*root, "static")
+		err = www.RestoreAssets(*root, "static")
+		if err != nil {
+			log.Fatalf("couldn't restore static assets in \"%s\": %s", static, err)
+		}
 	}
 
 	log.Printf("root directory: %s", *root)
