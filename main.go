@@ -23,7 +23,7 @@ var (
 
 var (
 	device  = flag.String("dev", "", "path to serial port, if empty it will be searched automatically")
-	root    = flag.String("root", "~/.goregen", "path to goregen's config files, defaults to $HOME/goregen")
+	root    = flag.String("root", "~/.goregen", "path to goregen's config files")
 	cfg     = flag.String("config", "", "path to config, defaults to <root>/config.toml")
 	verbose = flag.Bool("verbose", false, "higher verbosity")
 	version = flag.Bool("version", false, "print version & exit")
@@ -95,9 +95,7 @@ func init() {
 		}
 	}
 
-	log.Printf("root directory: %s", *root)
-	log.Printf("static directory: %s", static)
-	log.Printf("config file: %s", *cfg)
+	log.Printf("using config file: %s", *cfg)
 }
 
 func main() {

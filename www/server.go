@@ -280,7 +280,7 @@ func (s *Server) Start() {
 			WriteTimeout: 4 * time.Second,
 			ReadTimeout:  4 * time.Second,
 		}
-		log.Printf("listening on %s...", s.ListenAddr)
+		log.Printf("listening on http://%s ...", s.ListenAddr)
 		if err := srv.ListenAndServe(); err != nil {
 			log.Fatal("http.ListenAndServer:", err)
 		}
