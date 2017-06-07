@@ -1,33 +1,66 @@
 goregen
 =======
 
-/!\ goregen is under active development, and this readme is not up to date. Stay tuned!
+`goregen` is the web remote control interface for your `regenbox`
 
-Golang implementation for controlling regenbox. To get information about the project, or getting early beta access:
-[https://regenbox.org/](https://regenbox.org/)
+installation pre-requisites
+---------------------------
 
-Install [firmware/firmware.ino](https://github.com/solar3s/goregen/blob/master/firmware/firmware.ino)
-on arduino & run code
+This is the boring part, please check the [wiki][1] for detailed instructions  
 
+installation
+------------
 
-Quickstart
-==========
-1/ Download for your OS/Architecture from [builds/](https://github.com/solar3s/goregen/tree/master/builds) directory  
-2/ unzip  
-3/ upload firmware.ino to Arduino (via Arduino IDE for example)  
-4/ run executable  
+#### releases
 
-What to expect ?
-  * Serial port should be detected automatically
-  * Auto-pilot should be enabled (charge cycles between 900mV & 1400mV)
-  * Output to read from stdout in a console
+todo
 
-```text
-$ ./goregen
-2017/04/16 14:16:22 Found serial port "/dev/ttyUSB0"
-2017/04/16 14:16:22 Options: &serial.Mode{BaudRate:9600, DataBits:8, Parity:0, StopBits:0}
-2017/04/16 14:16:24 enabling discharge
-2017/04/16 14:16:25 Voltage: 1228mV
-2017/04/16 14:16:26 Voltage: 1226mV
-2017/04/16 14:16:27 Voltage: 1223mV
+#### go get
+
+`go get -v github.com/solar3s/goregen`
+
+goregen
+-------
+
+If you have proper driver, and `goregen`'s firmware was installed to your plugged-in board, you can now run 
+it from a terminal and expect something like this:
+
 ```
+rkj@rkdeb:~/go/src/github.com/solar3s/goregen$ goregen
+2017/06/07 23:12:24 using config file: /home/rkj/.goregen/config.toml
+2017/06/07 23:12:24 trying "/dev/ttyUSB0"...
+2017/06/07 23:12:24 connected to "/dev/ttyUSB0" in 404.795954ms
+2017/06/07 23:12:24 starting conn watcher (poll rate: 1s)
+2017/06/07 23:12:24 listening on http://localhost:3636 ...
+
+```
+
+#### open web browser at http://localhost:3636/
+
+![goregen](https://cloud.githubusercontent.com/assets/1699009/26520906/429cb2ca-42dc-11e7-948a-8e51deb05e38.png)
+
+If you see a blank oscilloscope and the mention `Status: Disconnected`, it means something's not quite ready yet on the
+hardware side, please refer to the [wiki][1]
+
+#### goregen -h
+```
+rkj@rkdeb:~/go/src/github.com/solar3s/goregen$ ./goregen -h
+Usage of ./goregen:
+  -assets
+    	extract static assets to <root>/static, if true, extracted assets also take precedence over binary assets
+	this option is useful for doing live tests on front-end
+  -config string
+    	path to config, defaults to <root>/config.toml
+  -debug
+    	enable debug mode
+  -dev string
+    	path to serial port, if empty it will be searched automatically
+  -root string
+    	path to goregen's config files (default "~/.goregen")
+  -verbose
+    	higher verbosity
+  -version
+    	print version & exit
+```
+
+[1]: https://github.com/solar3s/goregen/wiki
