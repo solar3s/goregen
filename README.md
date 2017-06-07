@@ -3,6 +3,8 @@ goregen
 
 `goregen` is the web remote control interface for your `regenbox`
 
+![goregen](https://cloud.githubusercontent.com/assets/1699009/26520906/429cb2ca-42dc-11e7-948a-8e51deb05e38.png)
+
 installation pre-requisites
 ---------------------------
 
@@ -36,8 +38,6 @@ rkj@rkdeb:~/go/src/github.com/solar3s/goregen$ goregen
 ```
 
 #### open web browser at http://localhost:3636/
-
-![goregen](https://cloud.githubusercontent.com/assets/1699009/26520906/429cb2ca-42dc-11e7-948a-8e51deb05e38.png)
 
 If you see a blank oscilloscope and the mention `Status: Disconnected`, it means something's not quite ready yet on the
 hardware side, please refer to the [wiki][1]
