@@ -129,6 +129,19 @@ func (sc *SerialConnection) readRoutine() {
 	for {
 		b := make([]byte, 32)
 		i, err := sc.Port.Read(b)
+
+		// read until last byte is a stop
+		j := i
+		for err == nil && j > 0 && b[i-1] != StopByte {
+			j, err = sc.Port.Read(b[i:])
+			i += j
+		}
+
+		// do not send stop-byte
+		if i > 0 && b[i-1] == StopByte {
+			i -= 1
+		}
+
 		select {
 		case sc.rdChan <- b[:i]:
 		case <-sc.Closed():

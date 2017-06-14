@@ -8,6 +8,9 @@
         (LED_0/1, PIN_DISCHARGE_0/1, PIN_CHARGE_0/1, MODE_*)
     - On uint readings: write ascii repr of value
         (READ_A0, READ_V)
+
+  All communication end with STOP_BYTE
+
 -----------------------------------------------------------------------*/
 
 
@@ -35,9 +38,7 @@
 
 #define PING            0xA0 // just a ping
 
-// default return values
-#define OK              0x00
-#define ERR             0x10
+#define STOP_BYTE       0xff // sent after all communication
 
 // ---------------------------
 // Internal address and config
@@ -86,24 +87,6 @@ unsigned long getVoltage() {
   return sum;
 }
 
-// standard ok response
-boolean sendOk() {
-  if (Serial.write(0) != 1) {
-    // nothing was written. it's a shame
-    return false;
-  }
-  return true;
-}
-
-// generic useless error
-boolean sendError() {
-  if (Serial.write(ERR) != 1) {
-    // nothing was written. it's a shame
-    return false;
-  }
-  return true;
-}
-
 // uint response
 boolean sendUint(unsigned long v) {
   if (Serial.print(v) <= 0) {
@@ -150,11 +133,9 @@ void loop() {
 
     case LED_0:
       setLed(0);
-      sendOk();
       break;
     case LED_1:
       setLed(1);
-      sendOk();
       break;
     case LED_TOGGLE:
       sendBool(toggleLed());
@@ -162,42 +143,36 @@ void loop() {
 
     case PIN_DISCHARGE_0:
       setDischarge(0);
-      sendOk();
       break;
     case PIN_DISCHARGE_1:
       setDischarge(1);
-      sendOk();
       break;
 
     case PIN_CHARGE_0:
       setCharge(0);
-      sendOk();
       break;
     case PIN_CHARGE_1:
       setCharge(1);
-      sendOk();
       break;
 
     case MODE_IDLE:
       setDischarge(0);
       setCharge(0);
-      sendOk();
       break;
     case MODE_CHARGE:
       setDischarge(0);
       setCharge(1);
-      sendOk();
       break;
     case MODE_DISCHARGE:
       setCharge(0);
       setDischarge(1);
-      sendOk();
       break;
     case PING:
-      sendOk();
       break;
     default:
-      sendError();
-      break;
+      // do not talk to strangers
+      return;
   }
+
+  Serial.write(STOP_BYTE);
 }

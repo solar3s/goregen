@@ -9,7 +9,6 @@ import (
 	"time"
 )
 
-var ErrEmptyRead error = errors.New("message was empty")
 var ErrDisconnected error = errors.New("no connection available")
 
 //go:generate stringer -type=State,ChargeState,BotMode -output=types_string.go
@@ -397,10 +396,6 @@ func (rb *RegenBox) read() (buf []byte, err error) {
 	if err != nil {
 		rb.state = ReadError
 		return buf, err
-	}
-	if buf == nil || len(buf) == 0 {
-		rb.state = UnexpectedError
-		return []byte{}, ErrEmptyRead
 	}
 	rb.state = Connected
 	return buf, nil

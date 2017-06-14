@@ -3,8 +3,8 @@ package regenbox
 // see firmware/firmware.ino
 
 const (
-	BoxReady byte = 0xff
 	Ping     byte = 0xa0
+	StopByte byte = 0xff
 )
 
 const (
