@@ -7,7 +7,7 @@
 // static/lib/d3.min.js
 // DO NOT EDIT!
 
-package www
+package web
 
 import (
 	"bytes"

@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"github.com/rkjdid/util"
 	"github.com/solar3s/goregen/regenbox"
-	"github.com/solar3s/goregen/www"
+	"github.com/solar3s/goregen/web"
 	"log"
 	"os"
 	"os/signal"
@@ -16,7 +16,7 @@ import (
 
 var (
 	conn   *regenbox.SerialConnection
-	server *www.Server
+	server *web.Server
 	rbCfg  regenbox.Config
 	static string
 )
@@ -89,7 +89,7 @@ func init() {
 	// restore static assets
 	if *assets {
 		static = filepath.Join(*root, "static")
-		err = www.RestoreAssets(*root, "static")
+		err = web.RestoreAssets(*root, "static")
 		if err != nil {
 			log.Fatalf("couldn't restore static assets in \"%s\": %s", static, err)
 		}
@@ -107,7 +107,7 @@ func main() {
 	watcher := regenbox.NewWatcher(rbox, regenbox.DefaultWatcherConfig)
 	watcher.WatchConn()
 
-	server = &www.Server{
+	server = &web.Server{
 		ListenAddr: "localhost:3636",
 		Regenbox:   rbox,
 		Verbose:    *verbose,

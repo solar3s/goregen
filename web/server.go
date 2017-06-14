@@ -1,4 +1,4 @@
-package www
+package web
 
 import (
 	"encoding/json"
@@ -270,7 +270,7 @@ func (s *Server) Start() {
 			Methods("GET")
 		s.router.Handle("/favicon.ico", http.HandlerFunc(NilHandler))
 		s.router.Handle("/",
-			Logger(http.HandlerFunc(s.Home), "www", s.Verbose)).
+			Logger(http.HandlerFunc(s.Home), "web", s.Verbose)).
 			Methods("GET")
 
 		// http root handle on gorilla router
