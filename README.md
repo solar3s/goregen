@@ -7,17 +7,26 @@ For information about the __regenbox__ project or to pre-order hardware, go to h
 
 ![goregen](https://cloud.githubusercontent.com/assets/1699009/26520906/429cb2ca-42dc-11e7-948a-8e51deb05e38.png)
 
-installation pre-requisites
----------------------------
+Slack
+-----
 
-This is the boring part, please check the [wiki][1] for detailed instructions  
+So far the easiest way to get live help if you're struggling with setup is at https://regenbox.slack.com/
+To get auto-invited you need to enter your e-mail address here https://jdid.co/regenbox/slack/
 
-installation
+Obviously if you're not struggling you're also very welcome!
+
+Drivers installation
+--------------------
+
+Before being able to connect to your Regenbox, you're gonna need hardware drivers.
+Refer to the [wiki section][3] for detailed instructions on how to do so.
+
+Installation
 ------------
 
 #### releases
 
-Download release for your OS / architecture at the [releases page][2]
+Download latest release for your OS / architecture at the [releases page][2]
 
 #### via go get
 
@@ -26,7 +35,7 @@ Download release for your OS / architecture at the [releases page][2]
 goregen
 -------
 
-If you have proper driver, unzip and run `goregen`, this should open a terminal and output something like this:
+If you have proper driver installed, unzip and run `goregen`, this will open a terminal and output something like this:
 
 ```
 rkj@rkdeb:~/go/src/github.com/solar3s/goregen$ goregen
@@ -61,5 +70,16 @@ Usage of ./goregen:
     	print version & exit
 ```
 
+Contributing
+------------
+
+The project is oh-so-young and needs help from everyone.
+Testing and documenting comes to mind, in the [wiki section][1] for example which needs love, feedback and evolution with the project.
+Any form of contribution to the code-base is also definitely welcome, for now no specifics are in place but usual guidelines apply. In any case, slack.
+
+#### Bug reports
+Should you encounter a bug, please provide as much information as possible and post an issue if it's not already there : https://github.com/solar3s/goregen/issues - if you're not sure, slack.
+
 [1]: https://github.com/solar3s/goregen/wiki
 [2]: https://github.com/solar3s/goregen/releases
+[3]: https://github.com/solar3s/goregen/wiki/Driver-installation
