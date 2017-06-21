@@ -62,4 +62,4 @@ Usage of ./goregen:
 ```
 
 [1]: https://github.com/solar3s/goregen/wiki
-[1]: https://github.com/solar3s/goregen/releases
+[2]: https://github.com/solar3s/goregen/releases
