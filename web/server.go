@@ -53,7 +53,7 @@ func NewServer(version string, rbox *regenbox.RegenBox, cfg *Config) *Server {
 	if cfg == nil {
 		cfg = &DefaultConfig
 	}
-	DefaultServerConfig.version = version
+	cfg.Web.version = version
 	return &Server{
 		Config:   cfg,
 		Regenbox: rbox,
