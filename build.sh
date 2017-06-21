@@ -19,7 +19,7 @@ GOARCH=amd64 GOOS=windows go build -o $tmp/goregen-win.exe
 echo "building windows-x86" >&2
 GOARCH=386 GOOS=windows go build -o $tmp/goregen-win-x86.exe
 
-
+mkdir -p builds/
 for i in $(ls -1 $tmp/*); do
   tmp2=$(mktemp -d)
   target="$tmp2/goregen"
