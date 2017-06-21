@@ -139,7 +139,9 @@ func main() {
 	go func() {
 		watcher.Stop()
 		rbox.Stop()
-		rbox.Conn.Close()
+		if rbox.Conn != nil {
+			rbox.Conn.Close()
+		}
 
 		close(cleanExit)
 	}()
