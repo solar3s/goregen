@@ -17,16 +17,22 @@ import (
 	"time"
 )
 
-type Server struct {
+type ServerConfig struct {
 	ListenAddr string
 	Verbose    bool
-	Debug      bool
-	RboxConfig string
-	RootDir    string
 	StaticDir  string
-	WsInterval time.Duration
-	Version    string
+	WsInterval util.Duration
 
+	version string
+}
+
+var DefaultServerConfig = ServerConfig{
+	ListenAddr: "localhost:3636",
+	WsInterval: util.Duration(time.Second),
+}
+
+type Server struct {
+	Config   *Config
 	Regenbox *regenbox.RegenBox
 
 	router     *mux.Router
@@ -43,8 +49,19 @@ type RegenboxData struct {
 	Version     string
 }
 
+func NewServer(version string, rbox *regenbox.RegenBox, cfg *Config) *Server {
+	if cfg == nil {
+		cfg = &DefaultConfig
+	}
+	DefaultServerConfig.version = version
+	return &Server{
+		Config:   cfg,
+		Regenbox: rbox,
+	}
+}
+
 func (s *Server) WsSnapshot(w http.ResponseWriter, r *http.Request) {
-	var interval = s.WsInterval
+	var interval = time.Duration(s.Config.Web.WsInterval)
 	if v, ok := r.URL.Query()["poll"]; ok {
 		if d, err := time.ParseDuration(v[0]); err == nil {
 			interval = d
@@ -57,7 +74,7 @@ func (s *Server) WsSnapshot(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if s.Verbose {
+	if s.Config.Web.Verbose {
 		log.Printf("websocket - subscription from %s", conn.RemoteAddr())
 	}
 
@@ -66,7 +83,7 @@ func (s *Server) WsSnapshot(w http.ResponseWriter, r *http.Request) {
 		for {
 			err = conn.WriteJSON(s.Regenbox.Snapshot())
 			if err != nil {
-				if s.Verbose {
+				if s.Config.Web.Verbose {
 					log.Printf("websocket - lost connection to %s", conn.RemoteAddr())
 				}
 				conn.Close()
@@ -77,10 +94,10 @@ func (s *Server) WsSnapshot(w http.ResponseWriter, r *http.Request) {
 	}(conn, s)
 }
 
-// Config POST: s.Regenbox.SetConfig() (json encoded),
-//              Regenbox's must be stopped first
-//         GET: gets current s.Regenbox.Config()
-func (s *Server) Config(w http.ResponseWriter, r *http.Request) {
+// ConfigHandler POST: s.Regenbox.SetConfig() (json encoded),
+//                     Regenbox's must be stopped first
+//               GET: gets current s.Regenbox.Config()
+func (s *Server) ConfigHandler(w http.ResponseWriter, r *http.Request) {
 	switch r.Method {
 	case http.MethodPost:
 		// copy current config, this allows for setting only a subset of the whole config
@@ -102,11 +119,11 @@ func (s *Server) Config(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, "error setting config (internal)", http.StatusInternalServerError)
 			return
 		}
-		// save newly set config
-		err = util.WriteTomlFile(cfg, s.RboxConfig)
-		if err != nil {
-			log.Println("error writing config:", err)
-		}
+		// save newly set config - todo ? huston we have design issues
+		//err = util.WriteTomlFile(cfg, s.cfg)
+		//if err != nil {
+		//	log.Println("error writing config:", err)
+		//}
 		break
 	case http.MethodGet:
 		break
@@ -145,7 +162,7 @@ func (s *Server) Snapshot(w http.ResponseWriter, r *http.Request) {
 // Static server
 func (s *Server) Static(w http.ResponseWriter, r *http.Request) {
 	var err error
-	var tpath = filepath.Join(s.StaticDir, r.URL.Path)
+	var tpath = filepath.Join(s.Config.Web.StaticDir, r.URL.Path)
 
 	// from s.Static folder
 	if f, err := os.Open(tpath); err == nil {
@@ -177,12 +194,12 @@ func (s *Server) Static(w http.ResponseWriter, r *http.Request) {
 func (s *Server) Home(w http.ResponseWriter, r *http.Request) {
 	state := s.Regenbox.State()
 	var tplData = RegenboxData{
-		ListenAddr:  s.ListenAddr,
+		ListenAddr:  s.Config.Web.ListenAddr,
 		State:       state.String(),
 		ChargeState: "-",
 		Voltage:     "-",
 		Config:      regenbox.Config{},
-		Version:     s.Version,
+		Version:     s.Config.Web.version,
 	}
 
 	if s.Regenbox != nil {
@@ -205,7 +222,7 @@ func (s *Server) Home(w http.ResponseWriter, r *http.Request) {
 func (s *Server) makeTplHandler(tplData interface{}) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		var err error
-		var tpath = filepath.Join(s.StaticDir, r.URL.Path)
+		var tpath = filepath.Join(s.Config.Web.StaticDir, r.URL.Path)
 		var tname = filepath.Base(r.URL.Path)
 
 		tpl := template.New(tname).Funcs(s.tplFuncs)
@@ -237,6 +254,10 @@ func (s *Server) makeTplHandler(tplData interface{}) http.Handler {
 	})
 }
 
+func (s *Server) Version() string {
+	return s.Config.Web.version
+}
+
 func (s *Server) Start() {
 	s.wsUpgrader = &websocket.Upgrader{
 		ReadBufferSize:  1024,
@@ -250,37 +271,37 @@ func (s *Server) Start() {
 	s.router = mux.NewRouter()
 
 	go func() {
+		verbose := s.Config.Web.Verbose
 		s.router.PathPrefix("/static/").Handler(
-			http.StripPrefix("/static/", Logger(http.HandlerFunc(s.Static), "static", s.Verbose))).
+			http.StripPrefix("/static/", Logger(http.HandlerFunc(s.Static), "static", verbose))).
 			Methods("GET")
 		s.router.Handle("/subscribe/snapshot",
-			Logger(http.HandlerFunc(s.WsSnapshot), "ws-snapshot", s.Verbose)).
+			Logger(http.HandlerFunc(s.WsSnapshot), "ws-snapshot", verbose)).
 			Methods("GET")
 		s.router.Handle("/config",
-			Logger(http.HandlerFunc(s.Config), "config", s.Verbose)).
+			Logger(http.HandlerFunc(s.ConfigHandler), "config", verbose)).
 			Methods("GET", "POST")
 		s.router.Handle("/start",
-			Logger(http.HandlerFunc(s.StartRegenbox), "start", s.Verbose)).
+			Logger(http.HandlerFunc(s.StartRegenbox), "start", verbose)).
 			Methods("POST")
 		s.router.Handle("/stop",
-			Logger(http.HandlerFunc(s.StopRegenbox), "stop", s.Verbose)).
+			Logger(http.HandlerFunc(s.StopRegenbox), "stop", verbose)).
 			Methods("POST")
 		s.router.Handle("/snapshot",
-			Logger(http.HandlerFunc(s.Snapshot), "snapshot", s.Verbose)).
+			Logger(http.HandlerFunc(s.Snapshot), "snapshot", verbose)).
 			Methods("GET")
 		s.router.Handle("/favicon.ico", http.HandlerFunc(NilHandler))
 		s.router.Handle("/",
-			Logger(http.HandlerFunc(s.Home), "web", s.Verbose)).
+			Logger(http.HandlerFunc(s.Home), "web", verbose)).
 			Methods("GET")
 
 		// http root handle on gorilla router
 		srv := &http.Server{
 			Handler:      s.router,
-			Addr:         s.ListenAddr,
+			Addr:         s.Config.Web.ListenAddr,
 			WriteTimeout: 4 * time.Second,
 			ReadTimeout:  4 * time.Second,
 		}
-		log.Printf("listening on http://%s ...", s.ListenAddr)
 		if err := srv.ListenAndServe(); err != nil {
 			log.Fatal("http.ListenAndServer:", err)
 		}

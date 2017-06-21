@@ -12,7 +12,7 @@ import (
 var ErrNoSerialPortFound = errors.New("didn't find any available serial port")
 var ErrClosedPort = errors.New("serial port is closed")
 
-var DefaultSerialConfig = &serial.Mode{
+var DefaultSerialConfig = serial.Mode{
 	BaudRate: 57600,
 	Parity:   serial.NoParity,
 	DataBits: 8,
@@ -27,7 +27,7 @@ type SerialConnection struct {
 
 	serial.Port
 	path   string
-	config *serial.Mode
+	config serial.Mode
 
 	rdChan    chan []byte
 	wrChan    chan []byte
@@ -36,7 +36,7 @@ type SerialConnection struct {
 	wg        sync.WaitGroup
 }
 
-func NewSerial(port serial.Port, config *serial.Mode, name string) *SerialConnection {
+func NewSerial(port serial.Port, config serial.Mode, name string) *SerialConnection {
 	return &SerialConnection{
 		Port:      port,
 		path:      name,
@@ -180,14 +180,14 @@ func FindSerial(config *serial.Mode) (*SerialConnection, error) {
 		return nil, err
 	}
 	if config == nil {
-		config = DefaultSerialConfig
+		config = &DefaultSerialConfig
 	}
 	var port serial.Port
 	for _, v := range ports {
 		port, err = serial.Open(v, config)
 		if err == nil {
 			log.Printf("trying \"%s\"...", v)
-			conn := NewSerial(port, config, v)
+			conn := NewSerial(port, *config, v)
 			conn.ReadTimeout = time.Millisecond * 50
 			conn.WriteTimeout = time.Millisecond * 50
 			conn.Start()
@@ -211,8 +211,8 @@ func FindSerial(config *serial.Mode) (*SerialConnection, error) {
 	return nil, err
 }
 
-func OpenPortName(name string) (port serial.Port, config *serial.Mode, err error) {
+func OpenPortName(name string) (port serial.Port, config serial.Mode, err error) {
 	config = DefaultSerialConfig
-	port, err = serial.Open(name, config)
+	port, err = serial.Open(name, &config)
 	return port, config, err
 }

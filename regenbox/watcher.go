@@ -1,6 +1,7 @@
 package regenbox
 
 import (
+	"github.com/rkjdid/util"
 	"log"
 	"sync"
 	"time"
@@ -14,16 +15,16 @@ type Watcher struct {
 }
 
 type WatcherConfig struct {
-	ConnPollRate time.Duration
+	ConnPollRate util.Duration
 }
 
-var DefaultWatcherConfig = &WatcherConfig{
-	ConnPollRate: time.Second,
+var DefaultWatcherConfig = WatcherConfig{
+	ConnPollRate: util.Duration(time.Second),
 }
 
 func NewWatcher(box *RegenBox, cfg *WatcherConfig) *Watcher {
 	if cfg == nil {
-		cfg = DefaultWatcherConfig
+		cfg = &DefaultWatcherConfig
 	}
 	return &Watcher{
 		rbox: box,
@@ -41,7 +42,6 @@ func (w *Watcher) Stop() {
 }
 
 func (w *Watcher) WatchConn() {
-	log.Printf("starting conn watcher (poll rate: %s)", w.cfg.ConnPollRate)
 	w.stopCh = make(chan struct{})
 	w.wg.Add(1)
 	go func() {
@@ -52,7 +52,7 @@ func (w *Watcher) WatchConn() {
 		)
 		for {
 			select {
-			case <-time.After(w.cfg.ConnPollRate):
+			case <-time.After(time.Duration(w.cfg.ConnPollRate)):
 			case <-w.stopCh:
 				w.stopCh = nil
 				return
