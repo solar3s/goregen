@@ -17,17 +17,16 @@ installation
 
 #### releases
 
-todo
+Download release for your OS / architecture at the [releases page][2]
 
-#### go get
+#### via go get
 
 `go get -v github.com/solar3s/goregen`
 
 goregen
 -------
 
-If you have proper driver, and `goregen`'s firmware was installed to your plugged-in board, you can now run 
-it from a terminal and expect something like this:
+If you have proper driver, unzip and run `goregen`, this should open a terminal and output something like this:
 
 ```
 rkj@rkdeb:~/go/src/github.com/solar3s/goregen$ goregen
@@ -49,16 +48,13 @@ hardware side, please refer to the [wiki][1]
 rkj@rkdeb:~/go/src/github.com/solar3s/goregen$ ./goregen -h
 Usage of ./goregen:
   -assets
-    	extract static assets to <root>/static, if true, extracted assets also take precedence over binary assets
-	this option is useful for doing live tests on front-end
+    	extract static assets to <root>/static, if true, extracted assets also take precedence over binary assets. This option is useful for doing live tests on front-end
   -config string
-    	path to config, defaults to <root>/config.toml
-  -debug
-    	enable debug mode
+    	path to config (defaults to <root>/config.toml)
   -dev string
     	path to serial port, if empty it will be searched automatically
   -root string
-    	path to goregen's config files (default "~/.goregen")
+    	path to goregen's main directory (defaults to executable path)
   -verbose
     	higher verbosity
   -version
@@ -66,3 +62,4 @@ Usage of ./goregen:
 ```
 
 [1]: https://github.com/solar3s/goregen/wiki
+[1]: https://github.com/solar3s/goregen/releases

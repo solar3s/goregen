@@ -22,12 +22,12 @@ var (
 
 var (
 	device     = flag.String("dev", "", "path to serial port, if empty it will be searched automatically")
-	rootPath   = flag.String("root", "", "path to goregen's main directory")
-	cfgPath    = flag.String("config", "", "path to config, defaults to <root>/config.toml")
+	rootPath   = flag.String("root", "", "path to goregen's main directory (defaults to executable path)")
+	cfgPath    = flag.String("config", "", "path to config (defaults to <root>/config.toml)")
 	verbose    = flag.Bool("verbose", false, "higher verbosity")
 	version    = flag.Bool("version", false, "print version & exit")
 	assetsPath = flag.Bool("assets", false, "extract static assets to <root>/static, if true, extracted assets "+
-		"also take precedence over binary assets\n\tthis option is useful for doing live tests on front-end")
+		"also take precedence over binary assets. This option is useful for doing live tests on front-end")
 )
 
 func UserHomeDir() string {
