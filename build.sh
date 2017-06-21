@@ -2,38 +2,38 @@
 
 tmp=$(mktemp -d)
 
-echo "building linx-x64" >&2
-GOARCH=amd64 GOOS=linux go build -o $tmp/goregen-linux
-echo "building linx-x86" >&2
-GOARCH=386 GOOS=linux go build -o $tmp/goregen-linux-x86
-echo "building linx-arm" >&2
-GOARCH=arm GOOS=linux go build -o $tmp/goregen-linux-arm
+for os in "linux" "darwin" "windows"; do
+  for arch in "amd64" "386" "arm"; do
+    case "$arch" in
+    "amd64")
+      post=""
+      ;;
+    "386")
+      post="-x86"
+      ;;
+    "arm")
+      [ "$os" != "linux" ] && continue
+      post="-arm"
+      ;;
+    esac
 
-echo "building darwin-x64" >&2
-GOARCH=amd64 GOOS=darwin go build -o $tmp/goregen-darwin
-echo "building darwin-x86" >&2
-GOARCH=386 GOOS=darwin go build -o $tmp/goregen-darwin-x86
+    bin="goregen"
+    [ "$os" = "windows" ] && bin=$bin.exe
 
-echo "building windows-x64" >&2
-GOARCH=amd64 GOOS=windows go build -o $tmp/goregen-win.exe
-echo "building windows-x86" >&2
-GOARCH=386 GOOS=windows go build -o $tmp/goregen-win-x86.exe
+    target="$tmp/goregen"
+    mkdir -p "$target"
+    echo "building $os-$arch"
+    GOARCH=$arch GOOS=$os go build -o $target/$bin
+    cp firmware/firmware.ino $target/
+    cd $tmp
 
-mkdir -p builds/
-for i in $(ls -1 $tmp/*); do
-  tmp2=$(mktemp -d)
-  target="$tmp2/goregen"
-  mkdir $target
-  cp $i $target/
-  cp firmware/firmware.ino $target/
-
-  cd $tmp2
-  zip -r $(basename $i).zip goregen/
-  cd -
-  rm -f builds/$(basename $i).zip
-  mv $tmp2/$(basename $i).zip builds/
-  rm -rf $tmp2
+    zipname="goregen-$os$post.zip"
+    zip -r $zipname goregen/
+    cd -
+    rm -f builds/$zipname
+    mv $tmp/$zipname builds/
+    rm -rf $target
+  done
 done
 
 rm -rf $tmp
-
