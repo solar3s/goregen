@@ -25,6 +25,7 @@ for os in "linux" "darwin" "windows"; do
     echo "building $os-$arch"
     GOARCH=$arch GOOS=$os go build -o $target/$bin
     cp firmware/firmware.ino $target/
+    cp README.md $target/
     cd $tmp
 
     zipname="goregen-$os$post.zip"
