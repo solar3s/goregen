@@ -18,7 +18,7 @@ Obviously if you're not struggling you're also very welcome!
 Drivers installation
 --------------------
 
-Before being able to connect to your Regenbox, you're gonna need hardware drivers.
+Before being able to connect to your Regenbox, you're gonna need hardware drivers.  
 Refer to the [wiki section][3] for detailed instructions on how to do so.
 
 Installation
