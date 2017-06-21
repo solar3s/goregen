@@ -129,6 +129,8 @@ func main() {
 	server := web.NewServer(Version, rbox, rootConfig)
 	server.Start()
 
+	log.Println("Press <Ctrl-C> to quit")
+
 	trap := make(chan os.Signal)
 	signal.Notify(trap, os.Kill, os.Interrupt)
 	<-trap

@@ -35,16 +35,59 @@ Download latest release for your OS / architecture at the [releases page][2]
 goregen
 -------
 
-If you have proper driver installed, unzip and run `goregen`, this will open a terminal and output something like this:
+If you have proper driver installed, unzip, open a terminal to extracted folder and run `goregen` which should output something like this:
 
 ```
-rkj@rkdeb:~/go/src/github.com/solar3s/goregen$ goregen
-2017/06/07 23:12:24 using config file: /home/rkj/.goregen/config.toml
-2017/06/07 23:12:24 trying "/dev/ttyUSB0"...
-2017/06/07 23:12:24 connected to "/dev/ttyUSB0" in 404.795954ms
-2017/06/07 23:12:24 starting conn watcher (poll rate: 1s)
-2017/06/07 23:12:24 listening on http://localhost:3636 ...
+rkj@rkdeb:/tmp/goregen$ ./goregen
+2017/06/21 12:51:33 created new config file "/tmp/goregen/config.toml"
+2017/06/21 12:51:33 using config file: /tmp/goregen/config.toml
+2017/06/21 12:51:33 trying "/dev/ttyUSB0"...
+2017/06/21 12:51:33 connected to "/dev/ttyUSB0" in 404.825718ms
+2017/06/21 12:51:33 starting conn watcher (poll rate: 1s)
+2017/06/21 12:51:33 starting webserver on http://localhost:3636 ...
+```
 
+configuration
+-------------
+
+First run will create a default configuration file `config.toml` in the current directory, it can be modified (restart of `goregen` required)
+
+```
+[User]
+  Name = ""   # your name for tracking data
+
+[Battery] # the battery you're testing
+  Type = ""   # AA, AAA...
+  Voltage = 0 # In millivolts
+  Brand = ""  # Battery brand
+  Model = ""  # Battery model
+
+[Web] # Options related to local web-server
+  ListenAddr = "localhost:3636"
+  Verbose = false
+  StaticDir = ""
+  WsInterval = "1s"
+
+[Regenbox] # Regenbox options
+  Mode = "Charger"        # Charger / Discharger / Cycler (can be triggered via web-interface)
+  NbHalfCycles = 10       # In Cycler mode: number of half-cycles to do before halting auto-mode (0: no-limit holdem)
+  UpDuration = "2h0m0s"   # Maximum time for an up-cycle before halting charge 
+  DownDuration = "2h0m0s" # Maximum time for a down-cycle before halting discharge
+  TopVoltage = 1410       # Target top voltage for charging
+  BottomVoltage = 900     # Target bottom voltage for discharging
+  IntervalSec = "10s"     # Save data every
+  ChargeFirst = true      # In Cycler mode: start with a charge cycle
+
+# Some more advanced configuration below, do not change if not sure
+
+[Watcher]
+  ConnPollRate = "1s"     # Check for USB device every
+
+[Serial]
+  BaudRate = 57600
+  DataBits = 8
+  Parity = 0
+  StopBits = 0
 ```
 
 #### open web browser at http://localhost:3636/

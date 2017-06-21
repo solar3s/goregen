@@ -1,4 +1,15 @@
-/*----------------------------------------------------------------------
+/*---------------------------------------------------------------------*
+  This file comes pre-installed in your Regenbox, it is responsible
+  for communicating with the main executable "goregen"
+
+  In case of a major upgrade, or if you need to install it on a new
+  Arduino board, please refer to the wiki section of the project :
+
+      https://github.com/solar3s/goregen/wiki/Upgrading-firmware
+-----------------------------------------------------------------------*/
+
+
+/*---------------------------------------------------------------------*
   Provides direct pin access via simple serial protocol
 
   Takes a 1byte instruction input, output can be:
