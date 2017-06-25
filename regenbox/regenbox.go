@@ -32,10 +32,9 @@ const (
 )
 
 const (
-	Manual     BotMode = BotMode(iota)
-	Charger            // Charge until TopVoltage is reached, then idle
-	Discharger         // Discharge until BottomVoltage is reached, then idle
-	Cycler             // Do cycles up to NbCycles between Bottom & TopValues, then idle
+	Charger    BotMode = BotMode(iota) // Charge until TopVoltage is reached, then idle
+	Discharger                         // Discharge until BottomVoltage is reached, then idle
+	Cycler                             // Do cycles up to NbCycles between Bottom & TopValues, then idle
 )
 
 type Snapshot struct {

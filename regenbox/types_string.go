@@ -9,7 +9,7 @@ const _State_name = "DisconnectedConnectedWriteErrorReadErrorUnexpectedErrorNilB
 var _State_index = [...]uint8{0, 12, 21, 31, 40, 55, 61}
 
 func (i State) String() string {
-	if i < 0 || i >= State(len(_State_index)-1) {
+	if i >= State(len(_State_index)-1) {
 		return fmt.Sprintf("State(%d)", i)
 	}
 	return _State_name[_State_index[i]:_State_index[i+1]]
@@ -20,18 +20,18 @@ const _ChargeState_name = "IdleChargingDischarging"
 var _ChargeState_index = [...]uint8{0, 4, 12, 23}
 
 func (i ChargeState) String() string {
-	if i < 0 || i >= ChargeState(len(_ChargeState_index)-1) {
+	if i >= ChargeState(len(_ChargeState_index)-1) {
 		return fmt.Sprintf("ChargeState(%d)", i)
 	}
 	return _ChargeState_name[_ChargeState_index[i]:_ChargeState_index[i+1]]
 }
 
-const _BotMode_name = "ManualChargerDischargerCycler"
+const _BotMode_name = "ChargerDischargerCycler"
 
-var _BotMode_index = [...]uint8{0, 6, 13, 23, 29}
+var _BotMode_index = [...]uint8{0, 7, 17, 23}
 
 func (i BotMode) String() string {
-	if i < 0 || i >= BotMode(len(_BotMode_index)-1) {
+	if i >= BotMode(len(_BotMode_index)-1) {
 		return fmt.Sprintf("BotMode(%d)", i)
 	}
 	return _BotMode_name[_BotMode_index[i]:_BotMode_index[i+1]]
