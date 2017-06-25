@@ -10,7 +10,6 @@ import (
 	"os"
 	"os/signal"
 	"path/filepath"
-	"runtime"
 	"time"
 )
 
@@ -29,17 +28,6 @@ var (
 	assetsPath = flag.Bool("assets", false, "extract static assets to <root>/static, if true, extracted assets "+
 		"also take precedence over binary assets. This option is useful for doing live tests on front-end")
 )
-
-func UserHomeDir() string {
-	if runtime.GOOS == "windows" {
-		home := os.Getenv("HOMEDRIVE") + os.Getenv("HOMEPATH")
-		if home == "" {
-			home = os.Getenv("USERPROFILE")
-		}
-		return home
-	}
-	return os.Getenv("HOME")
-}
 
 func init() {
 	flag.Parse()
