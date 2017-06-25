@@ -18,17 +18,17 @@ import (
 )
 
 type ServerConfig struct {
-	ListenAddr string
-	Verbose    bool
-	StaticDir  string
-	WsInterval util.Duration
+	ListenAddr        string
+	Verbose           bool
+	StaticDir         string
+	WebsocketInterval util.Duration
 
 	version string
 }
 
 var DefaultServerConfig = ServerConfig{
-	ListenAddr: "localhost:3636",
-	WsInterval: util.Duration(time.Second),
+	ListenAddr:        "localhost:3636",
+	WebsocketInterval: util.Duration(time.Second),
 }
 
 type Server struct {
@@ -78,8 +78,8 @@ func StartServer(version string, rbox *regenbox.RegenBox, cfg *Config, cfgPath s
 	srv.router.PathPrefix("/static/").Handler(
 		http.StripPrefix("/static/", Logger(http.HandlerFunc(srv.Static), "static", verbose))).
 		Methods("GET")
-	srv.router.Handle("/subscribe/snapshot",
-		Logger(http.HandlerFunc(srv.WsSnapshot), "ws-snapshot", verbose)).
+	srv.router.Handle("/websocket",
+		Logger(http.HandlerFunc(srv.Websocket), "ws-snapshot", verbose)).
 		Methods("GET")
 	srv.router.Handle("/config",
 		Logger(http.HandlerFunc(srv.RegenboxConfigHandler), "config", verbose)).
@@ -110,8 +110,9 @@ func StartServer(version string, rbox *regenbox.RegenBox, cfg *Config, cfgPath s
 	}
 }
 
-func (s *Server) WsSnapshot(w http.ResponseWriter, r *http.Request) {
-	var interval = time.Duration(s.Config.Web.WsInterval)
+// Websocket initiates a connection to
+func (s *Server) Websocket(w http.ResponseWriter, r *http.Request) {
+	var interval = time.Duration(s.Config.Web.WebsocketInterval)
 	if v, ok := r.URL.Query()["poll"]; ok {
 		if d, err := time.ParseDuration(v[0]); err == nil {
 			interval = d
@@ -125,7 +126,7 @@ func (s *Server) WsSnapshot(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if s.Config.Web.Verbose {
-		log.Printf("websocket - subscription from %s", conn.RemoteAddr())
+		log.Printf("websocket - subscription from %s (pollrate: %s)", conn.RemoteAddr(), interval)
 	}
 
 	go func(conn *websocket.Conn, s *Server) {
