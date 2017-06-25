@@ -23,7 +23,7 @@ var (
 	rootPath   = flag.String("root", "", "path to goregen's main directory (defaults to executable path)")
 	cfgPath    = flag.String("config", "", "path to config (defaults to <root>/config.toml)")
 	assetsPath = flag.String("assets", "", "restore static assets to provided directory & exit")
-	verbose    = flag.Bool("verbose", false, "higher verbosity")
+	verbose    = flag.Bool("v", false, "higher verbosity")
 	version    = flag.Bool("version", false, "print version & exit")
 )
 
