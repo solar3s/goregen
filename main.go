@@ -16,24 +16,37 @@ import (
 var (
 	conn       *regenbox.SerialConnection
 	rootConfig *web.Config
-	staticPath string
 )
 
 var (
 	device     = flag.String("dev", "", "path to serial port, if empty it will be searched automatically")
 	rootPath   = flag.String("root", "", "path to goregen's main directory (defaults to executable path)")
 	cfgPath    = flag.String("config", "", "path to config (defaults to <root>/config.toml)")
+	assetsPath = flag.String("assets", "", "restore static assets to provided directory & exit")
 	verbose    = flag.Bool("verbose", false, "higher verbosity")
 	version    = flag.Bool("version", false, "print version & exit")
-	assetsPath = flag.Bool("assets", false, "extract static assets to <root>/static, if true, extracted assets "+
-		"also take precedence over binary assets. This option is useful for doing live tests on front-end")
 )
 
 func init() {
 	flag.Parse()
+
+	// print version & exit
 	if *version {
 		fmt.Printf("goregen %s\n", Version)
 		os.Exit(0)
+	}
+
+	// restore static assets & exit
+	if *assetsPath != "" {
+		err := web.RestoreAssets(*assetsPath, "static")
+		if err != nil {
+			log.Fatalf("couldn't restore static assets in \"%s\": %s", *assetsPath, err)
+		} else {
+			p, _ := filepath.Abs(*assetsPath)
+			log.Printf("restored assets to directory \"%s\"", filepath.Join(p, "static"))
+			log.Println("use it as Web.StaticDir value in config to prioritize extracted static assets")
+			os.Exit(0)
+		}
 	}
 
 	if *device != "" {
@@ -74,17 +87,6 @@ func init() {
 			log.Fatalf("error creating config \"%s\": %s", *cfgPath, err)
 		}
 		log.Printf("created new config file \"%s\"", *cfgPath)
-	}
-
-	// restore static assets
-	if *assetsPath {
-		err = web.RestoreAssets(*rootPath, "static")
-		if err != nil {
-			log.Fatalf("couldn't restore static assets in \"%s\": %s", staticPath, err)
-		} else {
-			rootConfig.Web.StaticDir = filepath.Join(*rootPath, "static")
-			log.Printf("restored static assets to: %s", rootConfig.Web.StaticDir)
-		}
 	}
 
 	if *verbose {
