@@ -114,9 +114,10 @@ func main() {
 	watcher.WatchConn()
 
 	log.Printf("starting webserver on http://%s ...", rootConfig.Web.ListenAddr)
-	server := web.NewServer(Version, rbox, rootConfig)
-	server.Start()
+	go web.StartServer(Version, rbox, rootConfig, *cfgPath)
 
+	// small delay to allow for panic in StartServer
+	<-time.After(time.Millisecond * 500)
 	log.Println("Press <Ctrl-C> to quit")
 
 	trap := make(chan os.Signal)

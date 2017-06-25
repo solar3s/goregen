@@ -1,162 +1,103 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-	<meta charset="UTF-8">
-	<title>Regenbox</title>
-	<style>
-		body {
-			width: 100%;
-			height: 100%;
-			position: relative;
-			padding: 8px;
-			margin: 0;
-			box-sizing: border-box;
-		}
-
-		.header {
-			position: relative;
-			width: 100%;
-		}
-
-		.version {
-			position: absolute;
-			right: 15px;
-			bottom: -10px;
-		}
-
-		table {
-			border-spacing: 15px 3px;
-		}
-
-		table.overview td {
-			height: 24px;
-		}
-
-		.controls {
-			margin: 10px 0 0 15px;
-		}
-
-		section.nav, section.chart {
-			display: inline-block;
-			vertical-align: top;
-		}
-
-		section.nav {
-			width: 350px;
-		}
-
-		section.chart {
-			text-align: center;
-			margin: auto;
-		}
-
-		section.chart svg {
-			border: 1px black solid;
-			margin: auto;
-		}
-
-		svg .line {
-			fill: none;
-			stroke: #000;
-			stroke-width: 1px;
-		}
-	</style>
-	<script type="text/javascript" src="/static/lib/d3.min.js"></script>
+{{define "head"}}
 	<script type="text/javascript" src="/static/js/websocket.js"></script>
 	<script type="text/javascript" src="/static/js/controls.js"></script>
-	<script type="text/javascript" src="/static/js/chart.js"></script>
-	<script>
-		window.onload = function () {
-			setListenAddr("{{.ListenAddr}}");
-			subscribeSocket();
-		};
-	</script>
-</head>
-<body>
-	<section class="header">
-		<h1>Hello Regenbox!</h1>
-		<span class="version">{{.Version}}</span>
+{{end}}
+{{define "jsOnload"}}
+	setListenAddr("{{.Web.ListenAddr}}");
+	subscribeSocket();
+{{end}}
+{{define "nav"}}
+	<h2>Regenbox</h2>
+	<span style="display: none;" class="vRawVoltage"></span>
+	<table class="overview">
+		<tr>
+			<td>State:</td>
+			<td class="v vState">-</td>
+		</tr>
+		<tr>
+			<td>ChargeState:</td>
+			<td class="v vChargeState">-</td>
+		</tr>
+		<tr>
+			<td>Tension:</td>
+			<td class="v vVoltage">-</td>
+		</tr>
+		<tr>
+			<td>WebSocket:</td>
+			<td class="ws">-</td>
+		</tr>
+	</table>
+	<section class="controls">
+		<button class="ctrl cUp cCharge" onclick="rbCharge();">Charge</button>
+		<button class="ctrl cUp cDischarge" onclick="rbDischarge();">Discharge</button>
+		<button class="ctrl cUp cCycle" onclick="rbCycle();">Cycle</button>
+		<button class="ctrl cDown cStop" onclick="rbStop();">Stop</button>
 	</section>
-	<hr/>
-	<section class="nav">
-		<h2>overview</h2>
-		<span style="display: none;" class="vRawVoltage"></span>
-		<table class="overview">
+	<hr>
+	<section class="config">
+		<h3>User</h3>
+		<table>
 			<tr>
-				<td>State:</td>
-				<td class="v vState">-</td>
-			</tr>
-			<tr>
-				<td>ChargeState:</td>
-				<td class="v vChargeState">-</td>
-			</tr>
-			<tr>
-				<td>Tension:</td>
-				<td class="v vVoltage">-</td>
-			</tr>
-			<tr>
-				<td>WebSocket:</td>
-				<td class="ws">-</td>
+				<td>Name:</td>
+				<td class="userName">{{.User.Name}}</td>
 			</tr>
 		</table>
-
-		<section class="controls">
-			<button class="ctrl cUp cCharge" onclick="rbCharge();">Charge</button>
-			<button class="ctrl cUp cDischarge" onclick="rbDischarge();">Discharge</button>
-			<button class="ctrl cUp cCycle" onclick="rbCycle();">Cycle</button>
-			<button class="ctrl cDown cStop" onclick="rbStop();">Stop</button>
-		</section>
-		<hr>
-		<!--
-		type Config struct {
-			Mode          Mode          // Auto-mode lets the box do charge cycles using the following config values
-			NbHalfCycles  int           // In auto-mode: number of half-cycles to do before halting auto-mode (0: no-limit holdem)
-			UpDuration    time.Duration // In auto-mode: maximum time for an up-cycle before taking action (?)
-			DownDuration  time.Duration // In auto-mode: maximum time for a down-cycle before taking action (?)
-			TopVoltage    int           // In auto-mode: target top voltage before switching charge-cycle
-			BottomVoltage int           // In auto-mode: target bottom voltage before switching charge-cycle
-			IntervalSec   time.Duration // In auto-mode: sleep interval in second between each measure
-			ChargeFirst   bool          // In auto-mode: start auto-run with a charge-cycle (false: discharge)
-		}
-		-->
-		<h2>config</h2>
+		<h3>Battery</h3>
+		<table>
+			<tr>
+				<td>Type:</td>
+				<td class="batteryName">{{.Battery.Type}}</td>
+			</tr>
+			<tr>
+				<td>Voltage:</td>
+				<td class="batteryVoltage">{{if gt .Battery.Voltage 0}}{{.Battery.Voltage}}mV{{end}}</td>
+			</tr>
+			<tr>
+				<td>Brand:</td>
+				<td class="batteryBrand">{{.Battery.Brand}}</td>
+			</tr>
+			<tr>
+				<td>Model:</td>
+				<td class="batteryModel">{{.Battery.Model}}</td>
+			</tr>
+		</table>
+		<h3>Config</h3>
 		<table>
 			<tr>
 				<td>Mode:</td>
-				<td class="cfgMode">{{.Config.Mode}}</td>
+				<td class="cfgMode">{{.Regenbox.Mode}}</td>
 			</tr>
 			<tr>
 				<td>Number of half-cycles to do:</td>
-				<td class="cfgNbHalfCycles">{{.Config.NbHalfCycles}}</td>
+				<td class="cfgNbHalfCycles">{{.Regenbox.NbHalfCycles}}</td>
 			</tr>
 			<tr>
 				<td>Maximum charge duration:</td>
-				<td class="cfgUpDuration">{{.Config.UpDuration}}</td>
+				<td class="cfgUpDuration">{{.Regenbox.UpDuration}}</td>
 			</tr>
 			<tr>
 				<td>Maximum discharge duration:</td>
-				<td class="cfgDownDuration">{{.Config.DownDuration}}</td>
+				<td class="cfgDownDuration">{{.Regenbox.DownDuration}}</td>
 			</tr>
 			<tr>
 				<td>Target upper-bond voltage:</td>
-				<td class="cfgTopVoltage">{{.Config.TopVoltage}} mV</td>
+				<td class="cfgTopVoltage">{{.Regenbox.TopVoltage}} mV</td>
 			</tr>
 			<tr>
 				<td>Target lower-bond voltage:</td>
-				<td class="cfgBottomVoltage">{{.Config.BottomVoltage}} mV</td>
+				<td class="cfgBottomVoltage">{{.Regenbox.BottomVoltage}} mV</td>
 			</tr>
 			<tr>
 				<td>Snapshots interval duration:</td>
-				<td class="cfgIntervalSec">{{.Config.IntervalSec}}</td>
+				<td class="cfgIntervalSec">{{.Regenbox.IntervalSec}}</td>
 			</tr>
 			<tr>
 				<td>First cycle is a charge cycle:</td>
-				<td class="cfgChargeFirst">{{.Config.ChargeFirst}}</td>
+				<td class="cfgChargeFirst">{{.Regenbox.ChargeFirst}}</td>
 			</tr>
 		</table>
 	</section>
-	<section class="chart">
-		<svg width="800" height="500"></svg>
-	</section>
-</body>
-</html>
+{{end}}
+{{define "content"}}
+	<svg width="800" height="500"></svg>
+{{end}}

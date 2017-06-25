@@ -35,28 +35,78 @@ type Server struct {
 	Config   *Config
 	Regenbox *regenbox.RegenBox
 
+	cfgPath    string
 	router     *mux.Router
 	wsUpgrader *websocket.Upgrader
 	tplFuncs   template.FuncMap
+	tplData    TemplateData
 }
 
-type RegenboxData struct {
-	ListenAddr  string
-	State       string
-	ChargeState string
-	Voltage     string
-	Config      regenbox.Config
-	Version     string
+type TemplateData struct {
+	*Config
+	Version string
 }
 
-func NewServer(version string, rbox *regenbox.RegenBox, cfg *Config) *Server {
+// StartServer starts a new http.Server using provided version, RegenBox & Config.
+// It either doesn't return or panics (http.Listen)
+func StartServer(version string, rbox *regenbox.RegenBox, cfg *Config, cfgPath string) {
 	if cfg == nil {
 		cfg = &DefaultConfig
 	}
 	cfg.Web.version = version
-	return &Server{
+	srv := &Server{
 		Config:   cfg,
 		Regenbox: rbox,
+		cfgPath:  cfgPath,
+	}
+	srv.wsUpgrader = &websocket.Upgrader{
+		ReadBufferSize:  1024,
+		WriteBufferSize: 1024,
+	}
+	srv.tplFuncs = template.FuncMap{
+		"js":   srv.RenderJs,
+		"css":  srv.RenderCss,
+		"html": srv.RenderHtml,
+	}
+	srv.tplData = TemplateData{
+		srv.Config, version,
+	}
+
+	verbose := srv.Config.Web.Verbose
+	srv.router = mux.NewRouter()
+	// register endpoints
+	srv.router.PathPrefix("/static/").Handler(
+		http.StripPrefix("/static/", Logger(http.HandlerFunc(srv.Static), "static", verbose))).
+		Methods("GET")
+	srv.router.Handle("/subscribe/snapshot",
+		Logger(http.HandlerFunc(srv.WsSnapshot), "ws-snapshot", verbose)).
+		Methods("GET")
+	srv.router.Handle("/config",
+		Logger(http.HandlerFunc(srv.RegenboxConfigHandler), "config", verbose)).
+		Methods("GET", "POST")
+	srv.router.Handle("/start",
+		Logger(http.HandlerFunc(srv.StartRegenbox), "start", verbose)).
+		Methods("POST")
+	srv.router.Handle("/stop",
+		Logger(http.HandlerFunc(srv.StopRegenbox), "stop", verbose)).
+		Methods("POST")
+	srv.router.Handle("/snapshot",
+		Logger(http.HandlerFunc(srv.Snapshot), "snapshot", verbose)).
+		Methods("GET")
+	srv.router.Handle("/favicon.ico", http.HandlerFunc(NilHandler))
+	srv.router.Handle("/",
+		Logger(http.HandlerFunc(srv.Home), "web", verbose)).
+		Methods("GET")
+
+	// http root handle on gorilla router
+	httpServer := &http.Server{
+		Handler:      srv.router,
+		Addr:         srv.Config.Web.ListenAddr,
+		WriteTimeout: 4 * time.Second,
+		ReadTimeout:  4 * time.Second,
+	}
+	if err := httpServer.ListenAndServe(); err != nil {
+		log.Fatal("http.ListenAndServer:", err)
 	}
 }
 
@@ -94,10 +144,10 @@ func (s *Server) WsSnapshot(w http.ResponseWriter, r *http.Request) {
 	}(conn, s)
 }
 
-// ConfigHandler POST: s.Regenbox.SetConfig() (json encoded),
-//                     Regenbox's must be stopped first
-//               GET: gets current s.Regenbox.Config()
-func (s *Server) ConfigHandler(w http.ResponseWriter, r *http.Request) {
+// RegenboxConfigHandler POST: s.Regenbox.SetConfig() (json encoded),
+//                             Regenbox's must be stopped first
+//                       GET: gets current s.Regenbox.Config()
+func (s *Server) RegenboxConfigHandler(w http.ResponseWriter, r *http.Request) {
 	switch r.Method {
 	case http.MethodPost:
 		// copy current config, this allows for setting only a subset of the whole config
@@ -110,20 +160,22 @@ func (s *Server) ConfigHandler(w http.ResponseWriter, r *http.Request) {
 		}
 
 		if !s.Regenbox.Stopped() {
-			http.Error(w, "regenbox must be stopped first", http.StatusNotAcceptable)
+			http.Error(w, "regenbox must be stopped first", http.StatusConflict)
 			return
 		}
 		err = s.Regenbox.SetConfig(&cfg)
 		if err != nil {
 			log.Println("error setting config:", err)
-			http.Error(w, "error setting config (internal)", http.StatusInternalServerError)
+			http.Error(w, "error setting config", http.StatusInternalServerError)
 			return
 		}
-		// save newly set config - todo ? huston we have design issues
-		//err = util.WriteTomlFile(cfg, s.cfg)
-		//if err != nil {
-		//	log.Println("error writing config:", err)
-		//}
+		s.Config.Regenbox = cfg
+
+		// save newly set config
+		err = util.WriteTomlFile(s.Config, s.cfgPath)
+		if err != nil {
+			log.Println("error writing config:", err)
+		}
 		break
 	case http.MethodGet:
 		break
@@ -139,17 +191,11 @@ func (s *Server) ConfigHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) StartRegenbox(w http.ResponseWriter, r *http.Request) {
-	if !s.Regenbox.Stopped() {
-		http.Error(w, "regenbox is already running", http.StatusNotAcceptable)
-	}
 	s.Regenbox.Start()
 	w.Write([]byte("regenbox started"))
 }
 
 func (s *Server) StopRegenbox(w http.ResponseWriter, r *http.Request) {
-	if s.Regenbox.Stopped() {
-		http.Error(w, "regenbox is already stopped", http.StatusNotAcceptable)
-	}
 	s.Regenbox.Stop()
 	w.Write([]byte("regenbox stopped"))
 }
@@ -191,59 +237,55 @@ func (s *Server) Static(w http.ResponseWriter, r *http.Request) {
 	return
 }
 
+// Home serves homepage
 func (s *Server) Home(w http.ResponseWriter, r *http.Request) {
-	state := s.Regenbox.State()
-	var tplData = RegenboxData{
-		ListenAddr:  s.Config.Web.ListenAddr,
-		State:       state.String(),
-		ChargeState: "-",
-		Voltage:     "-",
-		Config:      regenbox.Config{},
-		Version:     s.Config.Web.version,
-	}
-
-	if s.Regenbox != nil {
-		i, err := s.Regenbox.ReadVoltage()
-		if err == nil {
-			tplData.Voltage = fmt.Sprintf("%dmV", i)
-			tplData.ChargeState = s.Regenbox.ChargeState().String()
-		}
-		tplData.Config = s.Regenbox.Config()
-	}
-
-	// set path to home template in request
-	r.URL.Path = "html/home.html"
-	s.makeTplHandler(tplData).ServeHTTP(w, r)
+	r.URL.Path = "html/base.html"
+	tplFiles := []string{"html/base.html", "html/home.html"}
+	s.makeTplHandler(tplFiles, s.tplData, s.tplFuncs).ServeHTTP(w, r)
 }
 
-// makeStaticHandler creates a handler that tries to load r.URL.Path
-// file from s.StaticDir first, then from Assets. It executes successfully
-// loaded template with profided tplData.
-func (s *Server) makeTplHandler(tplData interface{}) http.Handler {
+// makeStaticHandler creates a handler that tries to load templates
+// files from s.StaticDir first, then from binary Assets. It executes successfully
+// loaded templates with provided tplData and tplFuncs.
+func (s *Server) makeTplHandler(templates []string, tplData interface{}, tplFuncs template.FuncMap) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		var err error
-		var tpath = filepath.Join(s.Config.Web.StaticDir, r.URL.Path)
+		var fsTemplates = make([]string, len(templates))
+		var assetsTemplates = make([]string, len(templates))
+		for i, v := range templates {
+			fsTemplates[i] = filepath.Join(s.Config.Web.StaticDir, v)
+			assetsTemplates[i] = path.Join("static", v)
+		}
+		if tplData == nil {
+			tplData = s.tplData
+		}
+		if tplFuncs == nil {
+			tplFuncs = s.tplFuncs
+		}
+
 		var tname = filepath.Base(r.URL.Path)
 
 		tpl := template.New(tname).Funcs(s.tplFuncs)
-		tpl2, err := tpl.ParseFiles(tpath)
+		tpl, err = tpl.ParseFiles(fsTemplates...)
 		if err != nil {
-			// try loading asset instead
-			asset, err := Asset(path.Join("static", r.URL.Path))
-			if err != nil {
-				http.NotFound(w, r)
-				return
-			}
-			tpl2, err = tpl.Parse(string(asset))
-			if err != nil {
-				serr := fmt.Sprintf("error parsing %s template: %s", r.URL.Path, err)
-				log.Println(serr)
-				http.Error(w, serr, http.StatusInternalServerError)
-				return
+			// reset tpl and try loading from assets instead
+			tpl = template.New(tname).Funcs(s.tplFuncs)
+			for _, v := range assetsTemplates {
+				asset, err := Asset(v)
+				if err != nil {
+					http.NotFound(w, r)
+					return
+				}
+				tpl, err = tpl.Parse(string(asset))
+				if err != nil {
+					serr := fmt.Sprintf("error parsing %s template: %s", r.URL.Path, err)
+					log.Println(serr)
+					http.Error(w, serr, http.StatusInternalServerError)
+					return
+				}
 			}
 		}
-
-		err = tpl2.ExecuteTemplate(w, tname, tplData)
+		err = tpl.Execute(w, tplData)
 		if err != nil {
 			serr := fmt.Sprintf("error executing %s template: %s", r.URL.Path, err)
 			log.Println(serr)
@@ -252,58 +294,4 @@ func (s *Server) makeTplHandler(tplData interface{}) http.Handler {
 		}
 		return
 	})
-}
-
-func (s *Server) Version() string {
-	return s.Config.Web.version
-}
-
-func (s *Server) Start() {
-	s.wsUpgrader = &websocket.Upgrader{
-		ReadBufferSize:  1024,
-		WriteBufferSize: 1024,
-	}
-	s.tplFuncs = template.FuncMap{
-		"js":   s.RenderJs,
-		"css":  s.RenderCss,
-		"html": s.RenderHtml,
-	}
-	s.router = mux.NewRouter()
-
-	go func() {
-		verbose := s.Config.Web.Verbose
-		s.router.PathPrefix("/static/").Handler(
-			http.StripPrefix("/static/", Logger(http.HandlerFunc(s.Static), "static", verbose))).
-			Methods("GET")
-		s.router.Handle("/subscribe/snapshot",
-			Logger(http.HandlerFunc(s.WsSnapshot), "ws-snapshot", verbose)).
-			Methods("GET")
-		s.router.Handle("/config",
-			Logger(http.HandlerFunc(s.ConfigHandler), "config", verbose)).
-			Methods("GET", "POST")
-		s.router.Handle("/start",
-			Logger(http.HandlerFunc(s.StartRegenbox), "start", verbose)).
-			Methods("POST")
-		s.router.Handle("/stop",
-			Logger(http.HandlerFunc(s.StopRegenbox), "stop", verbose)).
-			Methods("POST")
-		s.router.Handle("/snapshot",
-			Logger(http.HandlerFunc(s.Snapshot), "snapshot", verbose)).
-			Methods("GET")
-		s.router.Handle("/favicon.ico", http.HandlerFunc(NilHandler))
-		s.router.Handle("/",
-			Logger(http.HandlerFunc(s.Home), "web", verbose)).
-			Methods("GET")
-
-		// http root handle on gorilla router
-		srv := &http.Server{
-			Handler:      s.router,
-			Addr:         s.Config.Web.ListenAddr,
-			WriteTimeout: 4 * time.Second,
-			ReadTimeout:  4 * time.Second,
-		}
-		if err := srv.ListenAndServe(); err != nil {
-			log.Fatal("http.ListenAndServer:", err)
-		}
-	}()
 }
