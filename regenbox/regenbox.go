@@ -136,7 +136,7 @@ func (rb *RegenBox) Start() {
 
 	rb.autorunCh = make(chan struct{})
 	rb.wg.Add(1)
-	if (rb.config.Mode == Charger) || rb.config.ChargeFirst {
+	if (rb.config.Mode == Charger) || (rb.config.Mode == Cycler && rb.config.ChargeFirst) {
 		rb.chargeState = Charging
 	} else {
 		rb.chargeState = Discharging
