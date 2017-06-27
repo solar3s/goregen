@@ -6,6 +6,7 @@ import (
 	"github.com/rkjdid/util"
 	"github.com/solar3s/goregen/regenbox"
 	"github.com/solar3s/goregen/web"
+	"io"
 	"log"
 	"os"
 	"os/signal"
@@ -23,6 +24,7 @@ var (
 	rootPath   = flag.String("root", "", "path to goregen's main directory (defaults to executable path)")
 	cfgPath    = flag.String("config", "", "path to config (defaults to <root>/config.toml)")
 	assetsPath = flag.String("assets", "", "restore static assets to provided directory & exit")
+	logDir     = flag.String("log", "", "path to logs directory")
 	verbose    = flag.Bool("v", false, "higher verbosity")
 	version    = flag.Bool("version", false, "print version & exit")
 )
@@ -49,6 +51,7 @@ func init() {
 		}
 	}
 
+	// force provided -dev flag
 	if *device != "" {
 		port, config, err := regenbox.OpenPortName(*device)
 		if err != nil {
@@ -58,6 +61,7 @@ func init() {
 		conn.Start()
 	}
 
+	// root directory for goregen
 	if *rootPath == "" {
 		exe, err := os.Executable()
 		if err != nil {
@@ -72,11 +76,39 @@ func init() {
 		}
 	}
 
+	// create log file
+	if *logDir == "" {
+		*logDir = filepath.Join(*rootPath, "log")
+	}
+	err := os.MkdirAll(*logDir, 0755)
+	if err != nil {
+		log.Fatalf("couldn't mkdir \"%s\": %s", *logDir, err)
+	}
+
+	logPath := filepath.Join(*logDir, time.Now().Format("2006-01-02_15h04m05.log"))
+	logFile, err := os.OpenFile(logPath, os.O_CREATE|os.O_WRONLY, 0644)
+	if err != nil {
+		log.Fatalf("couldn't create log file: %s", err)
+	}
+
+	// create log link
+	logLink := filepath.Join(*rootPath, "goregen.log")
+	_ = os.Remove(logLink)
+	err = os.Symlink(logPath, logLink)
+	if err != nil {
+		err = os.Link(logPath, logLink)
+		if err != nil {
+			log.Fatalf("couldn't create goregen.log link: %s", err)
+		}
+	}
+
+	// log to both Stderr & logFile
+	log.SetOutput(io.MultiWriter(logFile, os.Stderr))
+
 	if *cfgPath == "" {
 		*cfgPath = filepath.Join(*rootPath, "config.toml")
 	}
-
-	err := util.ReadTomlFile(&rootConfig, *cfgPath)
+	err = util.ReadTomlFile(&rootConfig, *cfgPath)
 	if err != nil {
 		if !os.IsNotExist(err) {
 			log.Fatalf("error reading config \"%s\": %s", *cfgPath, err)
@@ -94,6 +126,9 @@ func init() {
 	}
 
 	log.Printf("using config file: %s", *cfgPath)
+
+	// write full config for future references in log file only
+	_ = util.WriteToml(rootConfig, logFile)
 }
 
 func main() {
