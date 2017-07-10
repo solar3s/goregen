@@ -15,6 +15,8 @@ import (
 	"path"
 	"path/filepath"
 	"time"
+
+	_ "net/http/pprof"
 )
 
 type ServerConfig struct {
@@ -74,6 +76,10 @@ func StartServer(version string, rbox *regenbox.RegenBox, cfg *Config, cfgPath s
 
 	verbose := srv.Config.Web.Verbose
 	srv.router = mux.NewRouter()
+
+	// pprof handlers
+	srv.router.PathPrefix("/debug/pprof/").Handler(http.DefaultServeMux)
+
 	// register endpoints
 	srv.router.PathPrefix("/static/").Handler(
 		http.StripPrefix("/static/", Logger(http.HandlerFunc(srv.Static), "static", verbose))).
