@@ -22,13 +22,14 @@ for os in "linux" "darwin" "windows"; do
 
     target="$tmp/goregen"
     mkdir -p "$target"
-    echo "building $os-$arch"
+    echo "building $os-$arch" >&2
     GOARCH=$arch GOOS=$os go build -o $target/$bin
     cp firmware/firmware.ino $target/
     cp README.md $target/
     cd $tmp
 
     zipname="goregen-$os$post.zip"
+    echo "bundling builds/$zipname" >&2
     zip -r $zipname goregen/
     cd -
     rm -f builds/$zipname
