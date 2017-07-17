@@ -81,29 +81,31 @@ func StartServer(version string, rbox *regenbox.RegenBox, cfg *Config, cfgPath s
 	// pprof handlers
 	srv.router.PathPrefix("/debug/pprof/").Handler(http.DefaultServeMux)
 
+	// shh
+	srv.router.Handle("/favicon.ico", http.HandlerFunc(NilHandler))
+
 	// register endpoints
 	srv.router.PathPrefix("/static/").Handler(
 		http.StripPrefix("/static/", Logger(http.HandlerFunc(srv.Static), "static", verbose))).
-		Methods("GET")
+		Methods("GET", "HEAD")
 	srv.router.Handle("/websocket",
 		Logger(http.HandlerFunc(srv.Websocket), "ws-snapshot", verbose)).
-		Methods("GET")
+		Methods("GET", "HEAD")
 	srv.router.Handle("/config",
 		Logger(http.HandlerFunc(srv.RegenboxConfigHandler), "config", verbose)).
-		Methods("GET", "POST")
+		Methods("GET", "POST", "HEAD")
 	srv.router.Handle("/start",
 		Logger(http.HandlerFunc(srv.StartRegenbox), "start", verbose)).
-		Methods("POST")
+		Methods("POST", "HEAD")
 	srv.router.Handle("/stop",
 		Logger(http.HandlerFunc(srv.StopRegenbox), "stop", verbose)).
-		Methods("POST")
+		Methods("POST", "HEAD")
 	srv.router.Handle("/snapshot",
 		Logger(http.HandlerFunc(srv.Snapshot), "snapshot", verbose)).
-		Methods("GET")
-	srv.router.Handle("/favicon.ico", http.HandlerFunc(NilHandler))
+		Methods("GET", "HEAD")
 	srv.router.Handle("/",
 		Logger(http.HandlerFunc(srv.Home), "web", verbose)).
-		Methods("GET")
+		Methods("GET", "HEAD")
 
 	// http root handle on gorilla router
 	httpServer := &http.Server{
