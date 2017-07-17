@@ -10,6 +10,7 @@ import (
 	"html/template"
 	"io"
 	"log"
+	"mime"
 	"net/http"
 	"os"
 	"path"
@@ -220,7 +221,8 @@ func (s *Server) Static(w http.ResponseWriter, r *http.Request) {
 	// from s.Static folder
 	if f, err := os.Open(tpath); err == nil {
 		defer f.Close()
-		_, err := io.Copy(w, f)
+		w.Header().Set("Content-Type", mime.TypeByExtension(path.Ext(r.URL.Path)))
+		_, err = io.Copy(w, f)
 		if err != nil {
 			serr := fmt.Sprintf("io.Copy %s: %s", tpath, err)
 			log.Println(serr)
@@ -235,6 +237,7 @@ func (s *Server) Static(w http.ResponseWriter, r *http.Request) {
 		http.NotFound(w, r)
 		return
 	}
+	w.Header().Set("Content-Type", mime.TypeByExtension(path.Ext(r.URL.Path)))
 	_, err = w.Write(asset)
 	if err != nil {
 		serr := fmt.Sprintf("w.Write %s: %s", tpath, err)
