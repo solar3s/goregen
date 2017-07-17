@@ -123,7 +123,6 @@ func (rb *RegenBox) TestConnection() (_ time.Duration, err error) {
 }
 
 // Starts a detached routine. To stop it, call StopAutoRun()
-// todo, this should return error
 func (rb *RegenBox) Start() {
 	if !rb.Stopped() {
 		return
@@ -267,7 +266,6 @@ func (rb *RegenBox) Config() Config {
 
 func (rb *RegenBox) SetConfig(cfg *Config) error {
 	rb.config = cfg
-	// todo check some values, take some actions, maybe
 	return nil
 }
 
@@ -332,8 +330,7 @@ func (rb *RegenBox) State() State {
 }
 
 // SetChargeMode sends mode instruction to regenbox.
-// TODO THIS IS SHIT cause ModeIdle... Idle/Charging/Discharging are not compatible
-// TODO at least test this t_t
+// todo fix this unreadable shitstorm (constant values are not compatible for some forgotten reason)
 func (rb *RegenBox) SetChargeMode(charge byte) error {
 	var mode byte
 	switch charge {
