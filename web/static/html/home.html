@@ -1,4 +1,6 @@
+{{define "title"}}Goregen - Live{{end}}
 {{define "head"}}
+	<link rel="stylesheet" type="text/css" href="/static/css/home.css">
 	<script type="text/javascript" src="/static/js/websocket.js"></script>
 	<script type="text/javascript" src="/static/js/controls.js"></script>
 {{end}}
@@ -7,7 +9,7 @@
 	subscribeSocket();
 {{end}}
 {{define "nav"}}
-	<h2>Regenbox</h2>
+	<h3>Regenbox</h3>
 	<span style="display: none;" class="vRawVoltage"></span>
 	<table class="overview">
 		<tr>
@@ -33,7 +35,6 @@
 		<button class="ctrl cUp cCycle" onclick="rbCycle();">Cycle</button>
 		<button class="ctrl cDown cStop" onclick="rbStop();">Stop</button>
 	</section>
-	<hr>
 	<section class="config">
 		<h3>User</h3>
 		<table>
@@ -97,7 +98,4 @@
 			</tr>
 		</table>
 	</section>
-{{end}}
-{{define "content"}}
-	<svg width="800" height="500"></svg>
 {{end}}

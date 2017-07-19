@@ -1,0 +1,8 @@
+.header .logo {
+    background: rgba(242, 144, 9, 1);
+    border-bottom: 1px #98530a solid;
+}
+
+.header {
+    background: rgba(242, 144, 9, 0.3);
+}

@@ -2,92 +2,39 @@
 <html lang="en">
 <head>
 	<meta charset="UTF-8">
-	<title>Regenbox</title>
-	<style>
-		body {
-			width: 100%;
-			height: 100%;
-			position: absolute;
-			padding: 8px;
-			margin: 0;
-			box-sizing: border-box;
-		}
-
-		.header {
-			position: relative;
-			width: 100%;
-			height: 65px;
-		}
-
-		.version {
-			position: absolute;
-			right: 15px;
-			bottom: -10px;
-		}
-
-		table {
-			border-spacing: 15px 3px;
-		}
-
-		table.overview td {
-			height: 24px;
-		}
-
-		.config td:empty:after {
-			content: "<empty>";
-			color: rgba(255, 0, 0, 0.75);
-			font-style: italic;
-		}
-
-		.controls {
-			margin: 10px 0 25px 15px;
-		}
-
-		section.nav, section.content {
-			display: inline-block;
-			vertical-align: top;
-		}
-
-		section.nav {
-			width: 350px;
-		}
-
-		section.content {
-			text-align: center;
-			margin: auto;
-		}
-
-		section.content svg {
-			border: 1px black solid;
-			margin: auto;
-		}
-
-		svg .line {
-			fill: none;
-			stroke: #000;
-			stroke-width: 1px;
-		}
-	</style>
+	<title>{{template "title" .}}</title>
+	<link rel="icon" type="image/png" href="/static/img/icon.png">
+	<link rel="stylesheet" type="text/css" href="/static/css/base.css">
 	<script type="text/javascript" src="/static/lib/d3.min.js"></script>
 	<script type="text/javascript" src="/static/js/chart.js"></script>
 	{{template "head" .}}
 	<script>
 		window.onload = function () {
+			var w = Math.max(document.documentElement.clientWidth, window.innerWidth || 0);
+			var h = Math.max(document.documentElement.clientHeight, window.innerHeight || 0);
+			d3.select("#chart").attr("width", w-550).attr("height", h-190);
+			d3.select(".hide").classed("hide", false);
 			{{template "jsOnload" .}}
 		};
 	</script>
 </head>
-<body>
+<body class="hide">
 	<section class="header">
-		<h1>Hello Regenbox!</h1>
-		<span class="version">{{.Version}}</span>
+		<div class="logo">
+			<a href="{{.Link.Href}}">
+				<img src="/static/img/logo.png"/><br>
+				<span>{{.Link.Name}}</span>
+			</a>
+		</div>
+		<a href="https://github.com/solar3s/goregen/releases" class="version">
+			<img src="/static/img/github.png" />
+			<span>goregen {{.Version}}</span></a>
 	</section>
-	<hr/>
 	<section class="nav">
 		{{template "nav" .}}
 	</section>
 	<section class="content">
-		{{template "content" .}}
+		<svg id="chart" width="900" height="475"></svg>
 	</section>
 </body>
 </html>
