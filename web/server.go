@@ -45,8 +45,23 @@ type Server struct {
 	tplData    TemplateData
 }
 
+type Link struct {
+	Href, Name string
+}
+
+var HomeLink = Link{
+	Href: "/",
+	Name: "Live",
+}
+
+var ChartsLink = Link{
+	Href: "/charts",
+	Name: "Charts",
+}
+
 type TemplateData struct {
 	*Config
+	Link    Link
 	Version string
 }
 
@@ -72,7 +87,7 @@ func StartServer(version string, rbox *regenbox.RegenBox, cfg *Config, cfgPath s
 		"html": srv.RenderHtml,
 	}
 	srv.tplData = TemplateData{
-		srv.Config, version,
+		srv.Config, ChartsLink, version,
 	}
 
 	verbose := srv.Config.Web.Verbose
@@ -102,6 +117,9 @@ func StartServer(version string, rbox *regenbox.RegenBox, cfg *Config, cfgPath s
 		Methods("POST", "HEAD")
 	srv.router.Handle("/snapshot",
 		Logger(http.HandlerFunc(srv.Snapshot), "snapshot", verbose)).
+		Methods("GET", "HEAD")
+	srv.router.Handle("/charts",
+		Logger(http.HandlerFunc(srv.Charts), "charts", verbose)).
 		Methods("GET", "HEAD")
 	srv.router.Handle("/",
 		Logger(http.HandlerFunc(srv.Home), "web", verbose)).
@@ -253,7 +271,18 @@ func (s *Server) Static(w http.ResponseWriter, r *http.Request) {
 func (s *Server) Home(w http.ResponseWriter, r *http.Request) {
 	r.URL.Path = "html/base.html"
 	tplFiles := []string{"html/base.html", "html/home.html"}
-	s.makeTplHandler(tplFiles, s.tplData, s.tplFuncs).ServeHTTP(w, r)
+	data := s.tplData
+	data.Link = ChartsLink
+	s.makeTplHandler(tplFiles, data, s.tplFuncs).ServeHTTP(w, r)
+}
+
+// Explorer page
+func (s *Server) Charts(w http.ResponseWriter, r *http.Request) {
+	r.URL.Path = "html/base.html"
+	tplFiles := []string{"html/base.html", "html/charts.html"}
+	data := s.tplData
+	data.Link = HomeLink
+	s.makeTplHandler(tplFiles, data, s.tplFuncs).ServeHTTP(w, r)
 }
 
 // makeStaticHandler creates a handler that tries to load templates
