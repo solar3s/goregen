@@ -16,7 +16,7 @@
 
 td, button, p, li, span, a, h1, h2, h3, h4, h5 {
     font-family: 'agency', sans-serif;
-    font-size: 1.2em;
+    font-size: 19px;
 }
 
 div, nav, section, td, table, body {
@@ -73,7 +73,7 @@ body {
 .header .logo a span {
     position: absolute;
     left: 0; right: 0;
-    top: 39.5%;
+    top: 41%;
 
     font-family: "agency", sans-serif;
     font-weight: bold;
