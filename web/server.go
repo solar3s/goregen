@@ -97,7 +97,7 @@ func StartServer(version string, rbox *regenbox.RegenBox, cfg *Config, cfgPath s
 	srv.router.PathPrefix("/debug/pprof/").Handler(http.DefaultServeMux)
 
 	// shh
-	srv.router.Handle("/favicon.ico", http.HandlerFunc(NilHandler))
+	srv.router.Handle("/favicon.ico", http.RedirectHandler("/static/img/icon.png", 302))
 
 	// register endpoints
 	srv.router.PathPrefix("/static/").Handler(
