@@ -11,6 +11,12 @@ import (
 
 var ErrDisconnected error = errors.New("no connection available")
 
+var ErrBoxRunning = errors.New("box is already running")
+
+var ErrCycleTimeout = errors.New("cycle timeout before reaching stop condition")
+var ErrUserStop = errors.New("cycle stopped by user")
+var ErrSnapshotSendTimeout = errors.New("snapshot chan send timeout")
+
 //go:generate stringer -type=State,ChargeState,BotMode -output=types_string.go
 type State byte
 type ChargeState byte
@@ -51,7 +57,7 @@ type Config struct {
 	DownDuration  util.Duration // In auto-mode: maximum time for a down-cycle before taking action (?)
 	TopVoltage    int           // In auto-mode: target top voltage before switching charge-cycle
 	BottomVoltage int           // In auto-mode: target bottom voltage before switching charge-cycle
-	IntervalSec   util.Duration // In auto-mode: sleep interval in second between each measure
+	Ticker        util.Duration // In auto-mode: sleep interval in second between each measure
 	ChargeFirst   bool          // In auto-mode: start auto-run with a charge-cycle (false: discharge)
 }
 
@@ -61,10 +67,11 @@ type RegenBox struct {
 	config      *Config
 	chargeState ChargeState
 	state       State
-	autorunCh   chan struct{}
 	wg          sync.WaitGroup
 
-	measures []Snapshot
+	stop     chan struct{}
+	snapChan chan Snapshot
+	msgChan  chan CycleMessage
 }
 
 var DefaultConfig = Config{
@@ -74,7 +81,7 @@ var DefaultConfig = Config{
 	DownDuration:  util.Duration(time.Hour * 2),
 	TopVoltage:    1410,
 	BottomVoltage: 900,
-	IntervalSec:   util.Duration(time.Second * 10),
+	Ticker:        util.Duration(time.Second * 10),
 	ChargeFirst:   true,
 }
 
@@ -104,7 +111,8 @@ func NewRegenBox(conn *SerialConnection, cfg *Config) (rb *RegenBox, err error) 
 }
 
 const (
-	pingRetries = 30
+	pingRetries     = 30
+	snapshotTimeout = time.Duration(time.Second * 5)
 )
 
 // TestConnection sends a ping every testConnPoll,
@@ -122,110 +130,178 @@ func (rb *RegenBox) TestConnection() (_ time.Duration, err error) {
 	return time.Since(t0), err
 }
 
-// Starts a detached routine. To stop it, call StopAutoRun()
-func (rb *RegenBox) Start() {
-	if !rb.Stopped() {
-		return
-	}
-
-	logChargeState := func(i int) {
-		log.Printf("autorun: %s (%d)", rb.chargeState, i)
-	}
-
-	rb.autorunCh = make(chan struct{})
-	rb.wg.Add(1)
-	if (rb.config.Mode == Charger) || (rb.config.Mode == Cycler && rb.config.ChargeFirst) {
-		rb.chargeState = Charging
-	} else {
-		rb.chargeState = Discharging
-	}
-	logChargeState(0)
-	go func() {
-		defer func() {
-			log.Println("autorun: out, setting idle mode")
-			err := rb.SetIdle()
-			if err != nil {
-				log.Println("in SetIdle():", err)
-			}
-			rb.autorunCh = nil // avoid closing of closed chan
-			rb.wg.Done()
-		}()
-
-		var sn Snapshot
-		var halfCycles int = 1
-		var t0 = time.Now()
-		for {
-			// force charge state, can't hurt
-			err := rb.SetChargeMode(byte(rb.chargeState))
-			if err != nil {
-				log.Println("in rb.SetChargeMode:", err)
-			}
-
-			sn = rb.Snapshot()
-			log.Println(sn)
-			rb.measures = append(rb.measures, sn)
-
-			if sn.State != Connected || sn.Voltage == 0 {
-				// need error-less state here
-				continue
-			}
-
-			if rb.chargeState == Discharging {
-				if sn.Voltage <= rb.config.BottomVoltage {
-					log.Printf("autorun: %dV reached bottom value", rb.config.BottomVoltage)
-					if rb.config.Mode == Discharger {
-						log.Println("finished discharging battery (discharge only)")
-						return
-					}
-					err := rb.SetCharge()
-					if err != nil {
-						log.Println("in rb.SetCharge:", err)
-					} else {
-						logChargeState(halfCycles)
-						t0 = time.Now()
-						halfCycles++
-					}
-				} else if time.Since(t0) >= time.Duration(rb.config.DownDuration) {
-					log.Printf("autorun: couldn't discharge battery to %dmV in %s, battery's dead or something's wrong",
-						rb.config.BottomVoltage, rb.config.DownDuration)
-					return
-				}
-			}
-
-			if rb.chargeState == Charging {
-				if sn.Voltage >= rb.config.TopVoltage {
-					log.Printf("autorun: %dV reached top limit", rb.config.TopVoltage)
-					if rb.config.Mode == Charger {
-						log.Println("finished charging battery (charge only)")
-						return
-					}
-					err := rb.SetDischarge()
-					if err != nil {
-						log.Println("in rb.SetDischarge:", err)
-					} else {
-						logChargeState(halfCycles)
-						t0 = time.Now()
-						halfCycles++
-					}
-				} else if time.Since(t0) >= time.Duration(rb.config.UpDuration) {
-					log.Printf("couldn't charge battery to %dmV in %s, battery's dead or something's wrong",
-						rb.config.TopVoltage, rb.config.UpDuration)
-					return
-				}
-			}
-
-			if rb.config.NbHalfCycles > 0 && halfCycles >= rb.config.NbHalfCycles {
-				log.Printf("reached target %d half-cycles", rb.config.NbHalfCycles)
-				return
-			}
-
-			select {
-			case <-rb.autorunCh:
-				return
-			case <-time.After(time.Duration(rb.config.IntervalSec)):
-			}
+func (rb *RegenBox) doCycle(tickerDuration util.Duration, maxDuration util.Duration, stopCond func(v int) bool) error {
+	timeout := time.NewTimer(time.Duration(maxDuration))
+	ticker := time.NewTicker(time.Duration(tickerDuration))
+	var sn Snapshot
+	for {
+		select {
+		case <-rb.stop:
+			return ErrUserStop
+		case <-timeout.C:
+			return ErrCycleTimeout
+		case <-ticker.C:
 		}
-	}()
+
+		sn = rb.Snapshot()
+		if sn.State != Connected {
+			// need error-less state here, todo something?
+			continue
+		}
+
+		// send snapshot through the pipe
+		select {
+		case rb.snapChan <- sn:
+		case <-time.After(snapshotTimeout):
+			return ErrSnapshotSendTimeout
+		}
+
+		if stopCond(sn.Voltage) {
+			return nil
+		}
+	}
+}
+
+func (rb *RegenBox) topReached(i int) bool {
+	return i >= rb.config.TopVoltage
+}
+
+func (rb *RegenBox) bottomReached(i int) bool {
+	return i <= rb.config.BottomVoltage
+}
+
+// Start initiates a regen session, it returns a chan for snapshots,
+// and a chan for end of cycles messages. If returned error is not nil, channels are nil.
+func (rb *RegenBox) Start() (error, <-chan Snapshot, <-chan CycleMessage) {
+	if !rb.Stopped() {
+		return ErrBoxRunning, nil, nil
+	}
+
+	rb.snapChan = make(chan Snapshot)
+	rb.msgChan = make(chan CycleMessage, 36)
+	rb.stop = make(chan struct{})
+	clean := func() {
+		defer rb.wg.Done()
+		rb.stop = nil
+		var err error
+		for i := 0; i < 3; i++ {
+			err = rb.SetIdle()
+			if err == nil {
+				return
+			}
+			<-time.After(time.Millisecond * 250)
+		}
+		log.Println("error setting idle mode:", err)
+	}
+
+	var m CycleMessage
+	switch rb.config.Mode {
+	case Charger:
+		err := rb.SetCharge()
+		if err != nil {
+			return err, nil, nil
+		}
+
+		rb.msgChan <- chargeStarted(rb.config.TopVoltage)
+		rb.wg.Add(1)
+		go func() {
+			defer clean()
+			err = rb.doCycle(rb.config.Ticker, rb.config.UpDuration, rb.topReached)
+			if err == nil {
+				m = chargeEnded(rb.config.TopVoltage)
+			} else if err == ErrCycleTimeout {
+				m = chargeTimeout(rb.config.TopVoltage, rb.config.UpDuration)
+			} else {
+				m = chargeError(rb.config.TopVoltage, err)
+			}
+			rb.msgChan <- m
+		}()
+	case Discharger:
+		err := rb.SetDischarge()
+		if err != nil {
+			return err, nil, nil
+		}
+
+		rb.msgChan <- dischargeStarted(rb.config.BottomVoltage)
+		rb.wg.Add(1)
+		go func() {
+			defer clean()
+			err = rb.doCycle(rb.config.Ticker, rb.config.DownDuration, rb.bottomReached)
+			if err == nil {
+				m = dischargeEnded(rb.config.BottomVoltage)
+			} else if err == ErrCycleTimeout {
+				m = dischargeTimeout(rb.config.BottomVoltage, rb.config.DownDuration)
+			} else {
+				m = dischargeError(rb.config.BottomVoltage, err)
+			}
+			rb.msgChan <- m
+		}()
+	case Cycler:
+		var err error
+		var nextCycle ChargeState
+		if rb.config.ChargeFirst {
+			nextCycle = Charging
+		} else {
+			nextCycle = Discharging
+		}
+		err = rb.SetChargeMode(byte(nextCycle))
+		if err != nil {
+			return err, nil, nil
+		}
+
+		rb.wg.Add(1)
+		go func() {
+			defer clean()
+
+			var (
+				err       error
+				i, target int
+				duration  util.Duration
+				prefix    string
+				nbCycles  = rb.config.NbHalfCycles
+			)
+
+			for i = 1; i <= nbCycles; i++ {
+				if nextCycle == Charging {
+					err = rb.SetCharge()
+					if err != nil {
+						break
+					}
+					prefix = "charge"
+					target = rb.config.TopVoltage
+					duration = rb.config.UpDuration
+					rb.msgChan <- multiCycleStarted(target, prefix, i, nbCycles)
+					err = rb.doCycle(rb.config.Ticker, duration, rb.topReached)
+					nextCycle = Discharging
+				} else {
+					err = rb.SetDischarge()
+					if err != nil {
+						break
+					}
+					prefix = "discharge"
+					target = rb.config.BottomVoltage
+					duration = rb.config.DownDuration
+
+					rb.msgChan <- multiCycleStarted(target, prefix, i, nbCycles)
+					err = rb.doCycle(rb.config.Ticker, rb.config.DownDuration, rb.bottomReached)
+					nextCycle = Charging
+				}
+				if err != nil {
+					break
+				}
+			}
+			if err == nil {
+				m = multiCycleEnded(target, nbCycles)
+			} else if err == ErrCycleTimeout {
+				m = multiCycleTimeout(target, prefix, i, nbCycles, duration)
+			} else {
+				m = multiCycleError(target, err)
+			}
+			rb.msgChan <- m
+		}()
+	}
+
+	return nil, rb.snapChan, rb.msgChan
 }
 
 // Stops the box, and wait until Start() loop returns.
@@ -233,13 +309,13 @@ func (rb *RegenBox) Stop() {
 	if rb.Stopped() {
 		return
 	}
-	close(rb.autorunCh)
+	close(rb.stop)
 	rb.wg.Wait()
 }
 
 // Stopped returns false while box is running
 func (rb *RegenBox) Stopped() bool {
-	return rb.autorunCh == nil
+	return rb.stop == nil
 }
 
 // Snapshot retreives the state of rb at a given time.
@@ -369,6 +445,14 @@ func (rb *RegenBox) SetChargeMode(charge byte) error {
 // ping sends a ping to regenbox, returning error if something's wrong
 func (rb *RegenBox) ping() error {
 	_, err := rb.talk(Ping)
+	return err
+}
+
+// Ping sends a safe ping (locked) to regenbox
+func (rb *RegenBox) Ping() error {
+	rb.Lock()
+	_, err := rb.talk(Ping)
+	rb.Unlock()
 	return err
 }
 
