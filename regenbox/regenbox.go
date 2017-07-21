@@ -149,6 +149,9 @@ func (rb *RegenBox) doCycle(tickerDuration util.Duration, maxDuration util.Durat
 			continue
 		}
 
+		// repeat charge state, just in case (e.g. usb connect drop)
+		_ = rb.SetChargeMode(byte(rb.chargeState))
+
 		// send snapshot through the pipe
 		select {
 		case rb.snapChan <- sn:

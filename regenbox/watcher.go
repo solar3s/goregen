@@ -78,6 +78,15 @@ func (w *Watcher) WatchConn() {
 				w.rbox.Conn = conn
 				w.rbox.state = Connected
 				st = Connected
+
+				// Restore current charge state.
+				// If that fails here, rb.doCycle will
+				// remind the box what state it's in.
+				_, err = w.rbox.talk(byte(w.rbox.chargeState))
+				if err != nil {
+					// high-verbosity log
+					break
+				}
 			}
 			w.rbox.Unlock()
 		}
