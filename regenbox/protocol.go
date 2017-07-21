@@ -29,6 +29,8 @@ const (
 )
 
 const (
+	// beware of any changes here, voodoo was made in types_marshallers.go:89,98
+	// to ensure both equality with ChargeState types and fancy marshallers
 	ModeIdle byte = 0x50 | iota
 	ModeCharge
 	ModeDischarge

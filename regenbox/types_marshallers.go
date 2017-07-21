@@ -12,9 +12,9 @@ import (
 // string values instead of byte values, making communication
 // with any front-end or config files easier.
 //
-// this file should be go-generated, too
+// this file uses go-generated code: see types_string.go
 
-// ---- type State int
+// ---- type State byte
 
 func (s State) MarshalJSON() ([]byte, error) {
 	b, err := s.MarshalText()
@@ -57,7 +57,7 @@ func (s *State) UnmarshalText(b []byte) error {
 	return fmt.Errorf("unexpected error in UnmarshalText for '%s' (go generate?)", s)
 }
 
-// ---- type ChargeState int
+// ---- type ChargeState byte
 
 func (ch ChargeState) MarshalJSON() ([]byte, error) {
 	b, err := ch.MarshalText()
@@ -85,7 +85,8 @@ func (ch *ChargeState) UnmarshalText(b []byte) error {
 	if idx < 0 {
 		i, err := strconv.Atoi(str)
 		if err == nil {
-			*ch = ChargeState(i)
+			// voodoo to make types compatible with Mode* bytes (protocol.go:32-34)
+			*ch = ChargeState(0x50 | i)
 			return nil
 		}
 		return fmt.Errorf("Cannot unmarshall \"%s\" to ChargeState. Is it mispelled?", str)
@@ -93,14 +94,15 @@ func (ch *ChargeState) UnmarshalText(b []byte) error {
 
 	for i, v := range _ChargeState_index {
 		if int(v) == idx {
-			*ch = ChargeState(i)
+			// voodoo to make types compatible with Mode* bytes (protocol.go:32-34)
+			*ch = ChargeState(0x50 | i)
 			return nil
 		}
 	}
 	return fmt.Errorf("unexpected error in UnmarshalText for '%s' (go generate?)", ch)
 }
 
-// ---- type Mode int
+// ---- type Mode byte
 
 func (m BotMode) MarshalJSON() ([]byte, error) {
 	b, err := m.MarshalText()

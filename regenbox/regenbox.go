@@ -23,9 +23,9 @@ type ChargeState byte
 type BotMode byte
 
 const (
-	Idle ChargeState = ChargeState(iota)
-	Charging
-	Discharging
+	Idle        ChargeState = ChargeState(ModeIdle)
+	Charging    ChargeState = ChargeState(ModeCharge)
+	Discharging ChargeState = ChargeState(ModeDischarge)
 )
 
 const (
@@ -406,31 +406,10 @@ func (rb *RegenBox) State() State {
 }
 
 // SetChargeMode sends mode instruction to regenbox.
-// todo fix this unreadable shitstorm (constant values are not compatible for some forgotten reason)
-func (rb *RegenBox) SetChargeMode(charge byte) error {
-	var mode byte
-	switch charge {
-	case byte(Idle):
-		mode = byte(ModeIdle)
-	case byte(Charging):
-		mode = byte(ModeCharge)
-	case byte(Discharging):
-		mode = byte(ModeDischarge)
-	default:
-		mode = byte(charge)
-	}
-
-	switch mode {
-	case ModeIdle:
-		charge = byte(Idle)
-	case ModeCharge:
-		charge = byte(Charging)
-	case ModeDischarge:
-		charge = byte(Discharging)
-	default:
-		charge = byte(Idle)
-	}
-
+// /!\ This works because values match between
+//    - ModeIdle/ModeCharge/ModeDischarge from protocol.go
+//    - Idle/Charging/Discharging ChargeState from regenbox.go
+func (rb *RegenBox) SetChargeMode(mode byte) error {
 	rb.Lock()
 	_, err := rb.talk(mode)
 	rb.Unlock()
@@ -438,7 +417,7 @@ func (rb *RegenBox) SetChargeMode(charge byte) error {
 		return err
 	}
 	// no error, save state to box only now.
-	rb.chargeState = ChargeState(charge)
+	rb.chargeState = ChargeState(mode)
 	return nil
 }
 

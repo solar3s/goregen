@@ -20,8 +20,9 @@ const _ChargeState_name = "IdleChargingDischarging"
 var _ChargeState_index = [...]uint8{0, 4, 12, 23}
 
 func (i ChargeState) String() string {
+	i -= 80
 	if i >= ChargeState(len(_ChargeState_index)-1) {
-		return fmt.Sprintf("ChargeState(%d)", i)
+		return fmt.Sprintf("ChargeState(%d)", i+80)
 	}
 	return _ChargeState_name[_ChargeState_index[i]:_ChargeState_index[i+1]]
 }
