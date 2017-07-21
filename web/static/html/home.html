@@ -5,8 +5,8 @@
 	<script type="text/javascript" src="/static/js/controls.js"></script>
 {{end}}
 {{define "jsOnload"}}
-	setListenAddr("{{.Web.ListenAddr}}");
-	subscribeSocket();
+	liveChart.initFrom("/data", "#chart");
+	stateSocket.init("{{.Web.ListenAddr}}");
 {{end}}
 {{define "nav"}}
 	<h3>Regenbox</h3>
@@ -89,8 +89,8 @@
 				<td class="cfgBottomVoltage">{{.Regenbox.BottomVoltage}} mV</td>
 			</tr>
 			<tr>
-				<td>Snapshots interval duration:</td>
-				<td class="cfgIntervalSec">{{.Regenbox.IntervalSec}}</td>
+				<td>Ticker interval between two measures:</td>
+				<td class="cfgTicker">{{.Regenbox.Ticker}}</td>
 			</tr>
 			<tr>
 				<td>First cycle is a charge cycle:</td>

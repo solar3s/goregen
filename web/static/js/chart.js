@@ -24,16 +24,19 @@ function makeG(selector, data) {
 		});
 	var g = svg.append("g").attr("transform", "translate(" + margin.left + "," + margin.top + ")");
 
+	// rect
 	g.append("defs").append("clipPath")
 		.attr("id", "clip")
 		.append("rect")
 		.attr("width", width)
 		.attr("height", height);
 
+	// y axis
 	g.append("g")
 		.attr("class", "axis axis--y")
 		.call(d3.axisLeft(y));
 
+	// Draw data line
 	g.append("g")
 		.attr("clip-path", "url(#clip)")
 		.append("path")
@@ -79,25 +82,31 @@ chart.init = function (data, intervalSec) {
 };
 
 var liveChart = {};
-liveChart.init = function (zeroValue, n) {
-	if (!zeroValue) {
-		zeroValue = 0;
-	}
-	if (!n) {
-		n = 2400;
-	}
+liveChart.initFrom = function(url, selector) {
+	d3.request(url)
+		.header('Content-Type', 'application/json')
+		.mimeType('application/json')
+		.on('error', function (xhr) {
+			console.warn('couldn\'t retreive chart data', xhr);
+		})
+		.get(function (xhr) {
+			var data = JSON.parse(xhr.response);
+			liveChart.init(selector, data);
+		});
 
-	var data = [];
-	for (var i = n; i > 0; i--) data.push(zeroValue);
-
-	this.svg = makeG("#chart", data);
-	this.tick = function () {
-		var v = Number(d3.select('.vRawVoltage').html());
+};
+liveChart.init = function (selector, data) {
+	this.data = data;
+	this.svg = makeG(selector, data);
+	this.tick = function (v) {
+		if (!v) {
+			v = Number(d3.select('.vRawVoltage').html());
+		}
 		if (!v) {
 			return;
 		}
 
-		data.push(v);
+		this.data.push(v);
 		// Redraw the line.
 		d3.select("path.line")
 			.attr("d", this.svg.line)
@@ -105,17 +114,18 @@ liveChart.init = function (zeroValue, n) {
 			.attr("transform", "translate(" + this.svg.x(-1) + ",0)");
 
 		// Pop the old data point off the front.
-		data.shift();
+		this.data.shift();
 	};
 
+	// x axis
 	this.svg.g.append("g")
 		.attr("class", "axis axis--x")
 		.attr("transform", "translate(0," + this.svg.y(scaleBottom) + ")")
 		.call(d3.axisBottom(this.svg.x).tickFormat(function (d) {
-			if ((n - d) === 0) {
+			if ((data.length - d) === 0) {
 				return 'now';
 			}
-			return ((n - d) / (60 * 4)).toFixed(1) + 'h ago';
+			return ((data.length - d) / (60 * 4)).toFixed(1) + 'h ago';
 		}))
 		.selectAll("text")
 		.style("text-anchor", "end")

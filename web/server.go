@@ -20,6 +20,10 @@ import (
 	_ "net/http/pprof"
 )
 
+const liveInterval = util.Duration(time.Second * 15)
+const livePoints = 2400
+const liveLog = "data.log"
+
 type ServerConfig struct {
 	ListenAddr        string
 	Verbose           bool
@@ -38,11 +42,13 @@ type Server struct {
 	Config   *Config
 	Regenbox *regenbox.RegenBox
 
-	cfgPath    string
-	router     *mux.Router
-	wsUpgrader *websocket.Upgrader
-	tplFuncs   template.FuncMap
-	tplData    TemplateData
+	liveDataPath string
+	liveData     *util.TimeSeries
+	cfgPath      string
+	router       *mux.Router
+	wsUpgrader   *websocket.Upgrader
+	tplFuncs     template.FuncMap
+	tplData      TemplateData
 }
 
 type Link struct {
@@ -89,7 +95,43 @@ func StartServer(version string, rbox *regenbox.RegenBox, cfg *Config, cfgPath s
 	srv.tplData = TemplateData{
 		srv.Config, ChartsLink, version,
 	}
+	srv.liveDataPath = filepath.Join(filepath.Dir(srv.cfgPath), liveLog)
 
+	// load previous live data
+	err := util.ReadTomlFile(&srv.liveData, srv.liveDataPath)
+	if err != nil {
+		srv.liveData = util.NewTimeSeries(livePoints, liveInterval)
+	} else {
+		// shift start time relative to now
+		srv.liveData.ResetStartTime()
+		// set max length, which is unexported
+		srv.liveData.SetMaxLength(livePoints)
+	}
+
+	// start voltage monitoring
+	go func() {
+		ticker := time.NewTicker(time.Duration(srv.liveData.Interval))
+		var sn regenbox.Snapshot
+		var voltage int
+		for range ticker.C {
+			sn = srv.Regenbox.Snapshot()
+
+			// only update voltage if we have a connected box
+			// else consider voltage stale for the period
+			if sn.State == regenbox.Connected {
+				voltage = sn.Voltage
+			}
+			srv.liveData.Add(voltage)
+
+			// save to file every 10ticks
+			err := util.WriteTomlFile(srv.liveData, srv.liveDataPath)
+			if err != nil {
+				log.Println("couldn't save live datalog:", err)
+			}
+		}
+	}()
+
+	// router
 	verbose := srv.Config.Web.Verbose
 	srv.router = mux.NewRouter()
 
@@ -115,6 +157,9 @@ func StartServer(version string, rbox *regenbox.RegenBox, cfg *Config, cfgPath s
 	srv.router.Handle("/stop",
 		Logger(http.HandlerFunc(srv.StopRegenbox), "stop", verbose)).
 		Methods("POST", "HEAD")
+	srv.router.Handle("/data",
+		Logger(http.HandlerFunc(srv.LiveData), "livedata", verbose)).
+		Methods("GET", "HEAD")
 	srv.router.Handle("/snapshot",
 		Logger(http.HandlerFunc(srv.Snapshot), "snapshot", verbose)).
 		Methods("GET", "HEAD")
@@ -137,7 +182,8 @@ func StartServer(version string, rbox *regenbox.RegenBox, cfg *Config, cfgPath s
 	}
 }
 
-// Websocket initiates a connection to
+// Websocket is the handler to initiate a websocket connection
+// that keeps track of regenbox state and live measurements.
 func (s *Server) Websocket(w http.ResponseWriter, r *http.Request) {
 	var interval = time.Duration(s.Config.Web.WebsocketInterval)
 	if v, ok := r.URL.Query()["poll"]; ok {
@@ -158,16 +204,36 @@ func (s *Server) Websocket(w http.ResponseWriter, r *http.Request) {
 
 	go func(conn *websocket.Conn, s *Server) {
 		var err error
+		i, ch := s.liveData.Subscribe()
+		ticker := time.NewTicker(interval)
+
+		data := struct {
+			Type string
+			Data interface{}
+		}{"state", s.Regenbox.Snapshot()}
 		for {
-			err = conn.WriteJSON(s.Regenbox.Snapshot())
+			// send regenbox state asap
+			err = conn.WriteJSON(data)
 			if err != nil {
 				if s.Config.Web.Verbose {
 					log.Printf("websocket - lost connection to %s", conn.RemoteAddr())
 				}
 				conn.Close()
+				ticker.Stop()
+				s.liveData.Unsubscribe(i)
 				return
 			}
-			<-time.After(interval)
+
+			select {
+			case <-ticker.C:
+				// type: regenbox.Snapshot
+				data.Data = s.Regenbox.Snapshot()
+				data.Type = "state"
+			case x := <-ch:
+				// type: int
+				data.Data = x
+				data.Type = "ticker"
+			}
 		}
 	}(conn, s)
 }
@@ -226,6 +292,11 @@ func (s *Server) StartRegenbox(w http.ResponseWriter, r *http.Request) {
 func (s *Server) StopRegenbox(w http.ResponseWriter, r *http.Request) {
 	s.Regenbox.Stop()
 	w.Write([]byte("regenbox stopped"))
+}
+
+// LiveData encodes live measurement log as json to w.
+func (s *Server) LiveData(w http.ResponseWriter, r *http.Request) {
+	_ = json.NewEncoder(w).Encode(s.liveData.Padded())
 }
 
 // Snapshot encodes snapshot as json to w.
