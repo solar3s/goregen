@@ -112,16 +112,14 @@ func StartServer(version string, rbox *regenbox.RegenBox, cfg *Config, cfgPath s
 	go func() {
 		ticker := time.NewTicker(time.Duration(srv.liveData.Interval))
 		var sn regenbox.Snapshot
-		var voltage int
 		for range ticker.C {
 			sn = srv.Regenbox.Snapshot()
 
-			// only update voltage if we have a connected box
-			// else consider voltage stale for the period
-			if sn.State == regenbox.Connected {
-				voltage = sn.Voltage
+			// skip if box isn't connected
+			if sn.State != regenbox.Connected {
+				continue
 			}
-			srv.liveData.Add(voltage)
+			srv.liveData.Add(sn.Voltage)
 
 			// save to file every 10ticks
 			err := util.WriteTomlFile(srv.liveData, srv.liveDataPath)
