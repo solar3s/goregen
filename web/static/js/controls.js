@@ -38,7 +38,7 @@ function setConfig(cfg, callback) {
 			d3.selectAll('.cfgDownDuration').html(cfg.DownDuration);
 			d3.selectAll('.cfgTopVoltage').html(cfg.TopVoltage);
 			d3.selectAll('.cfgBottomVoltage').html(cfg.BottomVoltage);
-			d3.selectAll('.cfgIntervalSec').html(cfg.IntervalSec);
+			d3.selectAll('.cfgTicker').html(cfg.Ticker);
 			d3.selectAll('.cfgChargeFirst').html(cfg.ChargeFirst);
 			callback(cfg);
 		});
