@@ -13,9 +13,9 @@ var ErrDisconnected error = errors.New("no connection available")
 
 var ErrBoxRunning = errors.New("box is already running")
 
-var ErrCycleTimeout = errors.New("cycle timeout before reaching stop condition")
-var ErrUserStop = errors.New("cycle stopped by user")
-var ErrSnapshotSendTimeout = errors.New("snapshot chan send timeout")
+var ErrCycleTimeout = errors.New("Timeout before reaching stop condition")
+var ErrUserStop = errors.New("Stopped by user")
+var ErrSnapshotSendTimeout = errors.New("Snapshot chan send timeout")
 
 //go:generate stringer -type=State,ChargeState,BotMode -output=types_string.go
 type State byte
@@ -211,7 +211,7 @@ func (rb *RegenBox) Start() (error, <-chan Snapshot, <-chan CycleMessage) {
 			defer clean()
 			err = rb.doCycle(rb.config.Ticker, rb.config.UpDuration, rb.topReached)
 			if err == nil {
-				m = chargeEnded(rb.config.TopVoltage)
+				m = chargeReached(rb.config.TopVoltage)
 			} else if err == ErrCycleTimeout {
 				m = chargeTimeout(rb.config.TopVoltage, rb.config.UpDuration)
 			} else {
@@ -231,7 +231,7 @@ func (rb *RegenBox) Start() (error, <-chan Snapshot, <-chan CycleMessage) {
 			defer clean()
 			err = rb.doCycle(rb.config.Ticker, rb.config.DownDuration, rb.bottomReached)
 			if err == nil {
-				m = dischargeEnded(rb.config.BottomVoltage)
+				m = dischargeReached(rb.config.BottomVoltage)
 			} else if err == ErrCycleTimeout {
 				m = dischargeTimeout(rb.config.BottomVoltage, rb.config.DownDuration)
 			} else {
@@ -241,13 +241,11 @@ func (rb *RegenBox) Start() (error, <-chan Snapshot, <-chan CycleMessage) {
 		}()
 	case Cycler:
 		var err error
-		var nextCycle ChargeState
 		if rb.config.ChargeFirst {
-			nextCycle = Charging
+			err = rb.SetCharge()
 		} else {
-			nextCycle = Discharging
+			err = rb.SetDischarge()
 		}
-		err = rb.SetChargeMode(byte(nextCycle))
 		if err != nil {
 			return err, nil, nil
 		}
@@ -257,46 +255,47 @@ func (rb *RegenBox) Start() (error, <-chan Snapshot, <-chan CycleMessage) {
 			defer clean()
 
 			var (
-				err       error
-				i, target int
-				duration  util.Duration
-				prefix    string
-				nbCycles  = rb.config.NbHalfCycles
+				err          error
+				i, target    int
+				duration     util.Duration
+				currentCycle string
+				nbCycles     = rb.config.NbHalfCycles
 			)
+			if rb.config.ChargeFirst {
+				currentCycle = CycleDischarge
+			}
 
 			for i = 1; i <= nbCycles; i++ {
-				if nextCycle == Charging {
+				if currentCycle == CycleDischarge {
 					err = rb.SetCharge()
 					if err != nil {
 						break
 					}
-					prefix = "charge"
+					currentCycle = CycleCharge
 					target = rb.config.TopVoltage
 					duration = rb.config.UpDuration
-					rb.msgChan <- multiCycleStarted(target, prefix, i, nbCycles)
+					rb.msgChan <- multiCycleStarted(target, currentCycle, i, nbCycles)
 					err = rb.doCycle(rb.config.Ticker, duration, rb.topReached)
-					nextCycle = Discharging
 				} else {
 					err = rb.SetDischarge()
 					if err != nil {
 						break
 					}
-					prefix = "discharge"
+					currentCycle = CycleDischarge
 					target = rb.config.BottomVoltage
 					duration = rb.config.DownDuration
 
-					rb.msgChan <- multiCycleStarted(target, prefix, i, nbCycles)
+					rb.msgChan <- multiCycleStarted(target, currentCycle, i, nbCycles)
 					err = rb.doCycle(rb.config.Ticker, rb.config.DownDuration, rb.bottomReached)
-					nextCycle = Charging
 				}
 				if err != nil {
 					break
 				}
 			}
 			if err == nil {
-				m = multiCycleEnded(target, nbCycles)
+				m = multiCycleReached(target, nbCycles)
 			} else if err == ErrCycleTimeout {
-				m = multiCycleTimeout(target, prefix, i, nbCycles, duration)
+				m = multiCycleTimeout(target, currentCycle, i, nbCycles, duration)
 			} else {
 				m = multiCycleError(target, err)
 			}

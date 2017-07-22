@@ -5,66 +5,86 @@ import (
 	"github.com/rkjdid/util"
 )
 
+const (
+	CycleCharge    = "Charge"
+	CycleDischarge = "Discharge"
+	CycleMulti     = "Multi-cycle"
+)
+
 type CycleMessage struct {
-	Target  int
-	Content string
-	Error   error
-	Final   bool
+	Type     string
+	Target   int
+	Status   string
+	Erronous bool
+	Final    bool
 }
 
-func cycleMessage(target int, message string, err error, final bool) CycleMessage {
+func cycleMessage(t string, target int, message string, bErr bool, final bool) CycleMessage {
 	return CycleMessage{
-		Target:  target,
-		Content: message,
-		Error:   err,
-		Final:   final,
+		Type:     t,
+		Target:   target,
+		Status:   message,
+		Erronous: bErr,
+		Final:    final,
 	}
 }
 
+func cycleStarted(t string, target int) CycleMessage {
+	return cycleMessage(t, target, "Started...", false, false)
+}
+
+func cycleReached(t string, target int) CycleMessage {
+	return cycleMessage(t, target, "Target voltage reached", false, true)
+}
+
+func cycleTimeout(t string, target int, timeout util.Duration) CycleMessage {
+	return cycleMessage(t, target, fmt.Sprintf("Didn't reach target after %s", timeout), true, true)
+}
+
 func chargeStarted(target int) CycleMessage {
-	return cycleMessage(target, "Charge cycle started...", nil, false)
+	return cycleStarted(CycleCharge, target)
 }
 
 func dischargeStarted(target int) CycleMessage {
-	return cycleMessage(target, "Discharge cycle started...", nil, false)
+	return cycleStarted(CycleDischarge, target)
 }
 
-func multiCycleStarted(target int, prefix string, n int, of int) CycleMessage {
-	return cycleMessage(target, fmt.Sprintf("Multi-cycle: %s cycle %d/%d...", prefix, n, of), nil, false)
+func multiCycleStarted(target int, t string, n int, of int) CycleMessage {
+	return cycleMessage(CycleMulti, target, fmt.Sprintf("%s %d/%d...", t, n, of), false, false)
 }
 
-func chargeEnded(target int) CycleMessage {
-	return cycleMessage(target, "Charge: target voltage reached", nil, true)
+func chargeReached(target int) CycleMessage {
+	return cycleReached(CycleCharge, target)
 }
 
-func dischargeEnded(target int) CycleMessage {
-	return cycleMessage(target, "Discharge: target voltage reached", nil, true)
+func dischargeReached(target int) CycleMessage {
+	return cycleReached(CycleDischarge, target)
 }
 
-func multiCycleEnded(target int, n int) CycleMessage {
-	return cycleMessage(target, fmt.Sprintf("Multi-cycle: finished all %d half-cycles", n), nil, true)
+func multiCycleReached(target int, n int) CycleMessage {
+	return cycleMessage(CycleMulti, target, fmt.Sprintf("Completed %d half-cycles", n), false, true)
 }
 
 func chargeTimeout(target int, duration util.Duration) CycleMessage {
-	return chargeError(target, fmt.Errorf("didn't reach target after %s", duration))
+	return cycleTimeout(CycleCharge, target, duration)
 }
 
 func dischargeTimeout(target int, duration util.Duration) CycleMessage {
-	return dischargeError(target, fmt.Errorf("didn't reach target after %s", duration))
+	return cycleTimeout(CycleDischarge, target, duration)
 }
 
-func multiCycleTimeout(target int, prefix string, n int, of int, duration util.Duration) CycleMessage {
-	return multiCycleError(target, fmt.Errorf("%s cycle %d/%d didn't reach target after %s", prefix, n, of, duration))
+func multiCycleTimeout(target int, t string, n int, of int, duration util.Duration) CycleMessage {
+	return multiCycleError(target, fmt.Errorf("%s %d/%d didn't reach target after %s", t, n, of, duration))
 }
 
 func chargeError(target int, err error) CycleMessage {
-	return cycleMessage(target, fmt.Sprintf("Charge: %s", err), err, true)
+	return cycleMessage(CycleCharge, target, err.Error(), true, true)
 }
 
 func dischargeError(target int, err error) CycleMessage {
-	return cycleMessage(target, fmt.Sprintf("Discharge: %s", err), err, true)
+	return cycleMessage(CycleDischarge, target, err.Error(), true, true)
 }
 
 func multiCycleError(target int, err error) CycleMessage {
-	return cycleMessage(target, fmt.Sprintf("Multi-cycle: %s", err), err, true)
+	return cycleMessage(CycleMulti, target, err.Error(), true, true)
 }
