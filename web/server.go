@@ -336,7 +336,12 @@ func (s *Server) StartRegenbox(w http.ResponseWriter, r *http.Request) {
 				// add to chart
 				datalog.Add(sn.Voltage)
 			case msg = <-messages:
-				log.Printf("%s: %s", msg.Type, msg.Status)
+				if !msg.Final {
+					log.Printf("%s: %s - target: %dmV", msg.Type, msg.Status, msg.Target)
+				} else {
+					log.Printf("%s: %s", msg.Type, msg.Status)
+				}
+
 				s.Lock()
 				// broadcast message
 				for i, ch := range s.cycleSubs {
