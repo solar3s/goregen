@@ -29,19 +29,19 @@
 			<td class="ws">-</td>
 		</tr>
 	</table>
-	<h3>Cycle <span class="cycleREC hidden">&#x25cf;</span></h3>
+	<h3>Cycle <span class="cycleREC {{if .CycleMsg}}{{if .CycleMsg.Final}}hidden{{end}}{{else}}hidden{{end}}">&#x25cf;</span></h3>
 	<table class="cycle">
 		<tr>
 			<td>Type:</td>
-			<td class="cy cyType">-</td>
+			<td class="cy cyType">{{if .CycleMsg}}{{.CycleMsg.Type}}{{else}}-{{end}}</td>
 		</tr>
 		<tr>
 			<td>Status:</td>
-			<td class="cy cyStatus">-</td>
+			<td class="cy cyStatus">{{if .CycleMsg}}{{.CycleMsg.Status}}{{else}}-{{end}}</td>
 		</tr>
 		<tr>
 			<td>Target:</td>
-			<td class="cy cyTarget">-</td>
+			<td class="cy cyTarget">{{if .CycleMsg}}{{.CycleMsg.Target}}mV{{else}}-{{end}}</td>
 		</tr>
 		<tr>
 			<td>Runtime:</td>

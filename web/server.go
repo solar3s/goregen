@@ -72,8 +72,9 @@ var ChartsLink = Link{
 
 type TemplateData struct {
 	*Config
-	Link    Link
-	Version string
+	Link     Link
+	CycleMsg *regenbox.CycleMessage
+	Version  string
 }
 
 // StartServer starts a new http.Server using provided version, RegenBox & Config.
@@ -98,7 +99,7 @@ func StartServer(version string, rbox *regenbox.RegenBox, cfg *Config, cfgPath s
 		"html": srv.RenderHtml,
 	}
 	srv.tplData = TemplateData{
-		srv.Config, ChartsLink, version,
+		srv.Config, ChartsLink, nil, version,
 	}
 	srv.cycleSubs = make(map[int]chan regenbox.CycleMessage)
 
@@ -336,6 +337,7 @@ func (s *Server) StartRegenbox(w http.ResponseWriter, r *http.Request) {
 				// add to chart
 				datalog.Add(sn.Voltage)
 			case msg = <-messages:
+				s.tplData.CycleMsg = &msg
 				if !msg.Final {
 					log.Printf("%s: %s - target: %dmV", msg.Type, msg.Status, msg.Target)
 				} else {
