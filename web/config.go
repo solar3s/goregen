@@ -8,6 +8,7 @@ import (
 var DefaultConfig = Config{
 	User:     NoName,
 	Battery:  NoBattery,
+	Resistor: 10,
 	Web:      DefaultServerConfig,
 	Regenbox: regenbox.DefaultConfig,
 	Watcher:  regenbox.DefaultWatcherConfig,
@@ -17,6 +18,7 @@ var DefaultConfig = Config{
 type Config struct {
 	User     User
 	Battery  Battery
+	Resistor int
 	Web      ServerConfig
 	Regenbox regenbox.Config
 	Watcher  regenbox.WatcherConfig

@@ -67,6 +67,13 @@
 				<td class="userName">{{.User.Name}}</td>
 			</tr>
 		</table>
+		<h3>Resistor</h3>
+		<table>
+			<tr>
+				<td>Value:</td>
+				<td class="resValue">{{if gt .Resistor 0}}{{.Resistor}}ohm{{end}}</td>
+			</tr>
+		</table>
 		<h3>Battery</h3>
 		<table>
 			<tr>
