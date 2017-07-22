@@ -287,10 +287,12 @@ func (s *Server) RegenboxConfigHandler(w http.ResponseWriter, r *http.Request) {
 		}
 		s.Config.Regenbox = cfg
 
-		// save newly set config
-		err = util.WriteTomlFile(s.Config, s.cfgPath)
-		if err != nil {
-			log.Println("error writing config:", err)
+		if _, ok := r.URL.Query()["save"]; ok {
+			// save newly set config
+			err = util.WriteTomlFile(s.Config, s.cfgPath)
+			if err != nil {
+				log.Println("error writing config:", err)
+			}
 		}
 		break
 	case http.MethodGet:

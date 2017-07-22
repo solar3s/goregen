@@ -24,7 +24,7 @@ function setConfig(cfg, callback) {
 		throw new Error('expecting cfg to be a string, got ', typeof(cfg));
 	}
 
-	d3.request('/config')
+	d3.request('/config?save')
 		.header('Content-Type', 'application/json')
 		.mimeType('application/json')
 		.on('error', function(xhr) {
