@@ -39,12 +39,20 @@
 		<h3>User</h3>
 		<table>
 			<tr>
+				<td>Beta-test ID:</td>
+				<td class="userId">{{.User.BetaId}}</td>
+			</tr>
+			<tr>
 				<td>Name:</td>
 				<td class="userName">{{.User.Name}}</td>
 			</tr>
 		</table>
 		<h3>Battery</h3>
 		<table>
+			<tr>
+				<td>Beta-test ref:</td>
+				<td class="batteryRef">{{.Battery.BetaRef}}</td>
+			</tr>
 			<tr>
 				<td>Type:</td>
 				<td class="batteryName">{{.Battery.Type}}</td>

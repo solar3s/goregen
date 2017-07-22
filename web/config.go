@@ -24,10 +24,12 @@ type Config struct {
 }
 
 type User struct {
-	Name string
+	BetaId string // as provided by Regenbox
+	Name   string
 }
 
 type Battery struct {
+	BetaRef string // as provided by Regenbox
 	Type    string // AAA, AA...
 	Voltage int    // in millivolts
 	Brand   string // Duracell...
