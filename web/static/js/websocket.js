@@ -23,6 +23,7 @@ stateSocket.init = function(addr) {
 	};
 };
 
+var runtime = 0;
 stateSocket.start = function() {
 	var ws = this.ws;
 	d3.selectAll('.ws').html('Ok');
@@ -56,6 +57,26 @@ stateSocket.start = function() {
 				d3.selectAll('.vChargeState').html(charge);
 				d3.selectAll('.ctrl.cUp').attr('disabled', charge !== 'Idle' ? '' : null);
 				d3.selectAll('.ctrl.cDown').attr('disabled', charge === 'Idle' ? '' : null);
+				return;
+			case "cycle":
+				var cy = v.Data;
+				if (cy['Final']) {
+					d3.selectAll('.cycleREC').classed('hidden', true);
+					clearInterval(runtime);
+					runtime = 0;
+				} else {
+					d3.selectAll('.cycleREC').classed('hidden', false);
+					if (runtime === 0) {
+						var start = Date.now();
+						runtime = setInterval(function () {
+							var delta = Date.now() - start;
+							d3.selectAll('.cyRuntime').html('' + Math.floor(delta / 1000) + ' sec');
+						}, 1000);
+					}
+				}
+				d3.selectAll('.cyType').html(cy['Type']);
+				d3.selectAll('.cyStatus').html(cy['Status']);
+				d3.selectAll('.cyTarget').html(cy['Target'] + 'mV');
 				return;
 			default:
 				console.error("unknown event", v);

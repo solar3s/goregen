@@ -25,6 +25,7 @@ var (
 	cfgPath    = flag.String("config", "", "path to config (defaults to <root>/config.toml)")
 	assetsPath = flag.String("assets", "", "restore static assets to provided directory & exit")
 	logDir     = flag.String("log", "", "path to logs directory")
+	dataDir    = flag.String("data", "", "path to data directory (defaults to <root>/data")
 	verbose    = flag.Bool("v", false, "higher verbosity")
 	version    = flag.Bool("version", false, "print version & exit")
 )
@@ -69,6 +70,7 @@ func init() {
 		}
 		*rootPath = filepath.Dir(exe)
 	}
+
 	for _, v := range []string{*rootPath} {
 		err := os.MkdirAll(v, 0755)
 		if err != nil {
@@ -114,11 +116,21 @@ func init() {
 			log.Fatalf("error reading config \"%s\": %s", *cfgPath, err)
 		}
 		rootConfig = &web.DefaultConfig
+		rootConfig.Web.DataDir = filepath.Join(*rootPath, "data")
 		err = util.WriteTomlFile(rootConfig, *cfgPath)
 		if err != nil {
 			log.Fatalf("error creating config \"%s\": %s", *cfgPath, err)
 		}
 		log.Printf("created new config file \"%s\"", *cfgPath)
+	}
+
+	// datalogs directory
+	if *dataDir != "" {
+		rootConfig.Web.DataDir = *dataDir
+	}
+	err = os.MkdirAll(rootConfig.Web.DataDir, 0755)
+	if err != nil {
+		log.Fatalf("couldn't mkdir \"%s\": %s", rootConfig.Web.DataDir, err)
 	}
 
 	if *verbose {

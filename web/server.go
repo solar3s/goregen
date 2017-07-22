@@ -15,6 +15,7 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+	"sync"
 	"time"
 
 	_ "net/http/pprof"
@@ -28,6 +29,7 @@ type ServerConfig struct {
 	ListenAddr        string
 	Verbose           bool
 	StaticDir         string
+	DataDir           string
 	WebsocketInterval util.Duration
 
 	version string
@@ -49,6 +51,9 @@ type Server struct {
 	wsUpgrader   *websocket.Upgrader
 	tplFuncs     template.FuncMap
 	tplData      TemplateData
+	cycleSubs    map[int]chan regenbox.CycleMessage
+	subId        int
+	sync.Mutex
 }
 
 type Link struct {
@@ -95,6 +100,8 @@ func StartServer(version string, rbox *regenbox.RegenBox, cfg *Config, cfgPath s
 	srv.tplData = TemplateData{
 		srv.Config, ChartsLink, version,
 	}
+	srv.cycleSubs = make(map[int]chan regenbox.CycleMessage)
+
 	srv.liveDataPath = filepath.Join(filepath.Dir(srv.cfgPath), liveLog)
 
 	// load previous live data
@@ -202,8 +209,17 @@ func (s *Server) Websocket(w http.ResponseWriter, r *http.Request) {
 
 	go func(conn *websocket.Conn, s *Server) {
 		var err error
-		i, ch := s.liveData.Subscribe()
+		// subscribe to live ticker
+		liveId, liveCh := s.liveData.Subscribe()
+		// start state ticker
 		ticker := time.NewTicker(interval)
+		// subscribe to cycle ticker
+		s.Lock()
+		cycleCh := make(chan regenbox.CycleMessage, 10)
+		cycleId := s.subId
+		s.cycleSubs[cycleId] = cycleCh
+		s.subId++
+		s.Unlock()
 
 		data := struct {
 			Type string
@@ -218,7 +234,10 @@ func (s *Server) Websocket(w http.ResponseWriter, r *http.Request) {
 				}
 				conn.Close()
 				ticker.Stop()
-				s.liveData.Unsubscribe(i)
+				s.liveData.Unsubscribe(liveId)
+				s.Lock()
+				delete(s.cycleSubs, cycleId)
+				s.Unlock()
 				return
 			}
 
@@ -227,10 +246,14 @@ func (s *Server) Websocket(w http.ResponseWriter, r *http.Request) {
 				// type: regenbox.Snapshot
 				data.Data = s.Regenbox.Snapshot()
 				data.Type = "state"
-			case x := <-ch:
+			case x := <-liveCh:
 				// type: int
 				data.Data = x
 				data.Type = "ticker"
+			case msg := <-cycleCh:
+				// type: regenbox.CycleMessage
+				data.Data = msg
+				data.Type = "cycle"
 			}
 		}
 	}(conn, s)
@@ -283,8 +306,72 @@ func (s *Server) RegenboxConfigHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) StartRegenbox(w http.ResponseWriter, r *http.Request) {
-	s.Regenbox.Start()
+	err, snaps, messages := s.Regenbox.Start()
+	if err != nil {
+		http.Error(w, err.Error(), 500)
+		return
+	}
 	w.Write([]byte("regenbox started"))
+
+	f := filepath.Join(
+		s.Config.Web.DataDir,
+		fmt.Sprintf(
+			"%s_%s_%s_%s",
+			s.Config.User.BetaId,
+			s.Config.Battery.BetaRef,
+			s.Config.Regenbox.Mode,
+			time.Now().Format("2006-01-02_15h04m05.log")))
+
+	go func(file string, cfg regenbox.Config, user User, batt Battery) {
+		datalog := util.NewTimeSeries(0, cfg.Ticker)
+
+		var sn regenbox.Snapshot
+		var msg regenbox.CycleMessage
+		for {
+			select {
+			case sn = <-snaps:
+				if s.Config.Web.Verbose {
+					log.Println(sn)
+				}
+				// add to chart
+				datalog.Add(sn.Voltage)
+			case msg = <-messages:
+				log.Printf("%s: %s", msg.Type, msg.Status)
+				s.Lock()
+				// broadcast message
+				for i, ch := range s.cycleSubs {
+					if len(ch) == cap(ch) {
+						log.Printf("killing full chan %d", i)
+						delete(s.cycleSubs, i)
+					} else {
+						ch <- msg
+					}
+				}
+				s.Unlock()
+
+				if msg.Final == true {
+					chart := ChartLog{
+						User:          user,
+						Battery:       batt,
+						CycleType:     msg.Type,
+						TargetReached: !msg.Erronous,
+						TotalDuration: util.Duration(datalog.End.Sub(datalog.Start)),
+						Reason:        msg.Status,
+						Config:        cfg,
+						Measures:      *datalog,
+					}
+					err := util.WriteTomlFile(chart, file)
+					if err == nil {
+						log.Printf("Saved chart log: %s", file)
+					} else {
+						log.Printf("Couldn't save chart log %s: %s", file, err)
+						log.Println(chart)
+					}
+					return
+				}
+			}
+		}
+	}(f, s.Config.Regenbox, s.Config.User, s.Config.Battery)
 }
 
 func (s *Server) StopRegenbox(w http.ResponseWriter, r *http.Request) {

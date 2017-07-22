@@ -6,3 +6,35 @@
 .header {
     background: rgba(15, 146, 208, 0.3);
 }
+
+.cycleREC {
+    color: red;
+    -webkit-animation: flck 2s infinite linear;
+    -moz-animation: flck 2s infinite linear;
+    -o-animation: flck 2s infinite linear;
+    animation: flck 2s infinite linear;
+}
+
+@keyframes flck {
+    0% {opacity: 1;}
+    50% {opacity: 0;}
+    100% {opacity: 1;}
+}
+
+@-o-keyframes flck {
+    0% {opacity: 1;}
+    50% {opacity: 0;}
+    100% {opacity: 1;}
+}
+
+@-moz-keyframes flck {
+    0% {opacity: 1;}
+    50% {opacity: 0;}
+    100% {opacity: 1;}
+}
+
+@-webkit-keyframes flck {
+    0% {opacity: 1;}
+    50% {opacity: 0;}
+    100% {opacity: 1;}
+}
