@@ -13,12 +13,12 @@
 			var w = Math.max(document.documentElement.clientWidth, window.innerWidth || 0);
 			var h = Math.max(document.documentElement.clientHeight, window.innerHeight || 0);
 			d3.select("#chart").attr("width", w-550).attr("height", h-190);
-			d3.select(".hide").classed("hide", false);
+			d3.select(".nopac").classed("nopac", false);
 			{{template "jsOnload" .}}
 		};
 	</script>
 </head>
-<body class="hide">
+<body class="nopac">
 	<section class="header">
 		<div class="logo">
 			<a href="{{.Link.Href}}">
