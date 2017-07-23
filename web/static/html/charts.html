@@ -3,15 +3,26 @@
 	<link rel="stylesheet" type="text/css" href="/static/css/charts.css">
 {{end}}
 {{define "jsOnload"}}
+	// preload-first item
+	var explorer = d3.select("#explorer").node();
+	explorer.options.selectedIndex = 0;
+	// trigger event
+	explorerChange(explorer);
 {{end}}
 {{define "nav"}}
-	<h2>Explorer</h2>
-	<select id="select">
-		<option value="valeur1">Valeur 1</option>
-		<option value="valeur2">Valeur 2</option>
-		<option value="valeur3">Valeur 3</option>
+	<h3>Explorer</h3>
+	<table class="ex">
+		<tr>
+			<td>Data foler:</td>
+			<td class="ex exFolder">{{.DataDir}}</td>
+		</tr>
+	</table>
+	<select id="explorer" onchange="explorerChange(this);" multiple>
+		{{range .ChartLogs}}
+		<option
+				data-betaid="{{.User.BetaId}}" value="{{.Path}}">{{.String}}</option>
+		{{else}}
+		<option data-error="true">no logs found in data foler</option>
+		{{end}}
 	</select>
-{{end}}
-{{define "content"}}
-	<h3>hey content</h3>
 {{end}}

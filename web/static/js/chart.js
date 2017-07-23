@@ -1,4 +1,3 @@
-var chartMaxPoints = 1000;
 var scaleBottom = 0;
 var scaleTop = 1600;
 
@@ -59,28 +58,6 @@ function makeG(selector, data) {
 	}
 }
 
-var chart = {};
-chart.init = function (data, intervalSec) {
-	var n = data.length;
-	if (n > chartMaxPoints) {
-		// reduce number of points by ratio
-		var split = n / chartMaxPoints;
-		// reduce number of points to maxPoints
-		n = chartMaxPoints;
-		// update interval between 2 points according to ratio
-		intervalSec *= split;
-		// only take 1 point from data every split
-		var data2 = [];
-		for (var i = 0; i < chartMaxPoints; i++) {
-			data2.push(data[(i*split).toFixed(0)]);
-		}
-		data = data2;
-	}
-
-	this.svg = makeG("#chart", data);
-	return this;
-};
-
 var liveChart = {};
 liveChart.initFrom = function(url, selector) {
 	d3.request(url)
@@ -91,11 +68,23 @@ liveChart.initFrom = function(url, selector) {
 		})
 		.get(function (xhr) {
 			var data = JSON.parse(xhr.response);
-			liveChart.init(selector, data);
+			// past chart log
+			if (data["Measures"]) {
+				var measures = data["Measures"];
+				var interval = ((Date.parse(measures["End"]) - Date.parse(measures["Start"]))/1000)/measures.Data.length;
+				liveChart.init(selector, measures.Data, false, interval);
+			// live data
+			} else {
+				liveChart.init(selector, data, true, 15);
+			}
 		});
-
 };
-liveChart.init = function (selector, data) {
+
+liveChart.init = function (selector, data, reverse, intervalSec) {
+	if (this.svg) {
+		// clear first
+		d3.select(selector).html("");
+	}
 	this.data = data;
 	this.svg = makeG(selector, data);
 	this.tick = function (v) {
@@ -117,19 +106,56 @@ liveChart.init = function (selector, data) {
 		this.data.shift();
 	};
 
+	var reverseAxis = function (d) {
+		if ((data.length - d) === 0) {
+			return 'now';
+		}
+		return ((data.length - d) * intervalSec / 3600).toFixed(1) + 'h ago';
+	};
+
+	var normalAxis = function(d) {
+		return durationString(d*intervalSec);
+	};
+
 	// x axis
 	this.svg.g.append("g")
 		.attr("class", "axis axis--x")
 		.attr("transform", "translate(0," + this.svg.y(scaleBottom) + ")")
-		.call(d3.axisBottom(this.svg.x).tickFormat(function (d) {
-			if ((data.length - d) === 0) {
-				return 'now';
-			}
-			return ((data.length - d) / (60 * 4)).toFixed(1) + 'h ago';
-		}))
+		.call(d3.axisBottom(this.svg.x).tickFormat(reverse ? reverseAxis : normalAxis))
 		.selectAll("text")
 		.style("text-anchor", "end")
 		.attr("dx", "-.8em")
 		.attr("dy", ".15em")
 		.attr("transform", "rotate(-45)");
 };
+
+function explorerChange(e) {
+	if (e.selectedOptions.length < 1) {
+		return;
+	}
+
+	var opt = e.selectedOptions[0];
+	if (!opt.dataset["error"]) {
+		liveChart.initFrom('/chart/' + opt.value, '#chart');
+	}
+}
+
+function durationString(seconds) {
+	var durationString = "";
+	var secs = Number(seconds).toFixed(0);
+	var hours, minutes;
+	if (secs >= 3600) {
+		hours = Number(secs / 3600).toFixed(0);
+		secs -= hours * 3600;
+		durationString += "" + hours + "h ";
+		minutes = Number(secs / 60).toFixed(0);
+		secs -= minutes;
+		durationString += "" + minutes + "m ";
+	} else if (secs >= 60) {
+		minutes = Number(secs / 60).toFixed(0);
+		secs -= (minutes*60);
+		durationString += "" + minutes + "m ";
+	}
+	durationString += Number(secs).toFixed(0) + "s";
+	return durationString;
+}

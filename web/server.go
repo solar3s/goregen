@@ -72,9 +72,12 @@ var ChartsLink = Link{
 
 type TemplateData struct {
 	*Config
-	Link     Link
-	CycleMsg *regenbox.CycleMessage
-	Version  string
+	Link      Link
+	DataDir   string
+	CycleMsg  *regenbox.CycleMessage
+	ChartLogs []ChartLogInfo
+	Error     error
+	Version   string
 }
 
 // StartServer starts a new http.Server using provided version, RegenBox & Config.
@@ -99,7 +102,7 @@ func StartServer(version string, rbox *regenbox.RegenBox, cfg *Config, cfgPath s
 		"html": srv.RenderHtml,
 	}
 	srv.tplData = TemplateData{
-		srv.Config, ChartsLink, nil, version,
+		srv.Config, ChartsLink, cfg.Web.DataDir, nil, nil, nil, version,
 	}
 	srv.cycleSubs = make(map[int]chan regenbox.CycleMessage)
 
@@ -163,6 +166,9 @@ func StartServer(version string, rbox *regenbox.RegenBox, cfg *Config, cfgPath s
 	srv.router.Handle("/stop",
 		Logger(http.HandlerFunc(srv.StopRegenbox), "stop", verbose)).
 		Methods("POST", "HEAD")
+	srv.router.Handle("/chart/{path}",
+		Logger(http.HandlerFunc(srv.Chart), "chart", verbose)).
+		Methods("GET", "HEAD")
 	srv.router.Handle("/data",
 		Logger(http.HandlerFunc(srv.LiveData), "livedata", verbose)).
 		Methods("GET", "HEAD")
@@ -390,7 +396,22 @@ func (s *Server) StopRegenbox(w http.ResponseWriter, r *http.Request) {
 
 // LiveData encodes live measurement log as json to w.
 func (s *Server) LiveData(w http.ResponseWriter, r *http.Request) {
-	_ = json.NewEncoder(w).Encode(s.liveData.Padded())
+	err := json.NewEncoder(w).Encode(s.liveData.Padded())
+	if err != nil {
+		log.Println(err)
+	}
+}
+
+// Chart encodes ChartLog from path as json to w.
+func (s *Server) Chart(w http.ResponseWriter, r *http.Request) {
+	var cl ChartLog
+	err := util.ReadTomlFile(&cl, filepath.Join(s.Config.Web.DataDir, mux.Vars(r)["path"]))
+	if err == nil {
+		err = json.NewEncoder(w).Encode(cl)
+	}
+	if err != nil {
+		log.Println(err)
+	}
 }
 
 // Snapshot encodes snapshot as json to w.
@@ -447,6 +468,10 @@ func (s *Server) Charts(w http.ResponseWriter, r *http.Request) {
 	tplFiles := []string{"html/base.html", "html/charts.html"}
 	data := s.tplData
 	data.Link = HomeLink
+	data.Error, data.ChartLogs = ListChartLogs(s.Config.Web.DataDir)
+	if s.Config.Web.Verbose {
+		log.Printf("/charts: loaded %d chart log-infos from \"%s\"", len(data.ChartLogs), s.Config.Web.DataDir)
+	}
 	s.makeTplHandler(tplFiles, data, s.tplFuncs).ServeHTTP(w, r)
 }
 

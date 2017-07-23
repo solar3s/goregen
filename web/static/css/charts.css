@@ -6,3 +6,13 @@
 .header {
     background: rgba(242, 144, 9, 0.3);
 }
+
+#explorer {
+    width: 95%;
+    min-height: 150px;
+    margin: 5px 10px 5px 15px;
+}
+
+select {
+    font-size: 16px;
+}
