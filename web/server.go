@@ -322,17 +322,8 @@ func (s *Server) StartRegenbox(w http.ResponseWriter, r *http.Request) {
 	}
 	w.Write([]byte("regenbox started"))
 
-	f := filepath.Join(
-		s.Config.Web.DataDir,
-		fmt.Sprintf(
-			"%s_%s_%s_%s",
-			s.Config.User.BetaId,
-			s.Config.Battery.BetaRef,
-			s.Config.Regenbox.Mode,
-			time.Now().Format("2006-01-02_15h04m05.log")))
-
-	go func(file string, cfg regenbox.Config, user User, batt Battery) {
-		datalog := util.NewTimeSeries(0, cfg.Ticker)
+	go func(cfg Config) {
+		datalog := util.NewTimeSeries(0, cfg.Regenbox.Ticker)
 
 		var sn regenbox.Snapshot
 		var msg regenbox.CycleMessage
@@ -366,27 +357,28 @@ func (s *Server) StartRegenbox(w http.ResponseWriter, r *http.Request) {
 
 				if msg.Final == true {
 					chart := ChartLog{
-						User:          user,
-						Battery:       batt,
+						User:          cfg.User,
+						Battery:       cfg.Battery,
 						CycleType:     msg.Type,
 						TargetReached: !msg.Erronous,
 						TotalDuration: util.Duration(datalog.End.Sub(datalog.Start)),
 						Reason:        msg.Status,
-						Config:        cfg,
+						Config:        cfg.Regenbox,
 						Measures:      *datalog,
 					}
-					err := util.WriteTomlFile(chart, file)
+					fname := filepath.Join(cfg.Web.DataDir, chart.FileName())
+					err := util.WriteTomlFile(chart, fname)
 					if err == nil {
-						log.Printf("Saved chart log: %s", file)
+						log.Printf("Saved chart log: %s", fname)
 					} else {
-						log.Printf("Couldn't save chart log %s: %s", file, err)
+						log.Printf("Couldn't save chart log %s: %s", fname, err)
 						log.Println(chart)
 					}
 					return
 				}
 			}
 		}
-	}(f, s.Config.Regenbox, s.Config.User, s.Config.Battery)
+	}(*s.Config)
 }
 
 func (s *Server) StopRegenbox(w http.ResponseWriter, r *http.Request) {
