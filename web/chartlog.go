@@ -13,6 +13,7 @@ import (
 type ChartLog struct {
 	User          User
 	Battery       Battery
+	Resistor      int
 	CycleType     string
 	TargetReached bool
 	Reason        string

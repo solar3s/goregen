@@ -359,6 +359,7 @@ func (s *Server) StartRegenbox(w http.ResponseWriter, r *http.Request) {
 					chart := ChartLog{
 						User:          cfg.User,
 						Battery:       cfg.Battery,
+						Resistor:      cfg.Resistor,
 						CycleType:     msg.Type,
 						TargetReached: !msg.Erronous,
 						TotalDuration: util.Duration(datalog.End.Sub(datalog.Start)),
