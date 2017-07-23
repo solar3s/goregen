@@ -491,7 +491,18 @@ func (s *Server) makeTplHandler(templates []string, tplData interface{}, tplFunc
 		tpl := template.New(tname).Funcs(s.tplFuncs)
 		tpl, err = tpl.ParseFiles(fsTemplates...)
 		if err != nil {
-			// reset tpl and try loading from assets instead
+			parseError := func(err error) {
+				serr := fmt.Sprintf("template parse error in %s: %s", r.URL.Path, err)
+				log.Println(serr)
+				http.Error(w, serr, http.StatusInternalServerError)
+				return
+			}
+			// if this is something else than not found, propagate error
+			if !os.IsNotExist(err) {
+				parseError(err)
+				return
+			}
+			// else reset tpl and try loading from assets instead
 			tpl = template.New(tname).Funcs(s.tplFuncs)
 			for _, v := range assetsTemplates {
 				asset, err := Asset(v)
@@ -501,9 +512,7 @@ func (s *Server) makeTplHandler(templates []string, tplData interface{}, tplFunc
 				}
 				tpl, err = tpl.Parse(string(asset))
 				if err != nil {
-					serr := fmt.Sprintf("error parsing %s template: %s", r.URL.Path, err)
-					log.Println(serr)
-					http.Error(w, serr, http.StatusInternalServerError)
+					parseError(err)
 					return
 				}
 			}
