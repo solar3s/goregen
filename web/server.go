@@ -362,7 +362,7 @@ func (s *Server) StartRegenbox(w http.ResponseWriter, r *http.Request) {
 						Resistor:      cfg.Resistor,
 						CycleType:     msg.Type,
 						TargetReached: !msg.Erronous,
-						TotalDuration: util.Duration(datalog.End.Sub(datalog.Start)),
+						TotalDuration: util.Duration(datalog.End.Round(time.Second).Sub(datalog.Start.Round(time.Second))),
 						Reason:        msg.Status,
 						Config:        cfg.Regenbox,
 						Measures:      *datalog,
