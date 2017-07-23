@@ -1,6 +1,7 @@
 {{define "title"}}Goregen - Charts{{end}}
 {{define "head"}}
 	<link rel="stylesheet" type="text/css" href="/static/css/charts.css">
+	<script type="text/javascript" src="/static/js/explorer.js"></script>
 {{end}}
 {{define "jsOnload"}}
 	// preload-first item
@@ -25,4 +26,105 @@
 		<option data-error="true">no logs found in data foler</option>
 		{{end}}
 	</select>
+	<section class="config">
+		<h3>Cycle</h3>
+		<table class="cycle">
+			<tr>
+				<td>Type:</td>
+				<td class="cy cyType">-</td>
+			</tr>
+			<tr>
+				<td>Status:</td>
+				<td class="cy cyStatus">-</td>
+			</tr>
+			<tr>
+				<td>Duration:</td>
+				<td class="cy cyRuntime">-</td>
+			</tr>
+			<tr>
+				<td>Measures interval:</td>
+				<td class="cy cyInterval">-</td>
+			</tr>
+			<tr>
+				<td>Start:</td>
+				<td class="cy cyStart">-</td>
+			</tr>
+			<tr>
+				<td>End:</td>
+				<td class="cy cyEnd">-</td>
+			</tr>
+		</table>
+		<h3>User</h3>
+		<table>
+			<tr>
+				<td>Beta-test ID:</td>
+				<td class="userId">-</td>
+			</tr>
+			<tr>
+				<td>Name:</td>
+				<td class="userName">-</td>
+			</tr>
+		</table>
+		<h3>Battery</h3>
+		<table>
+			<tr>
+				<td>Beta-test ref:</td>
+				<td class="batteryRef">-</td>
+			</tr>
+			<tr>
+				<td>Type:</td>
+				<td class="batteryType">-</td>
+			</tr>
+			<tr>
+				<td>Voltage:</td>
+				<td class="batteryVoltage">-</td>
+			</tr>
+			<tr>
+				<td>Brand:</td>
+				<td class="batteryBrand">-</td>
+			</tr>
+			<tr>
+				<td>Model:</td>
+				<td class="batteryModel">-</td>
+			</tr>
+		</table>
+		<h3>Resistor</h3>
+		<table>
+			<tr>
+				<td>Value:</td>
+				<td class="resValue">-</td>
+			</tr>
+		</table>
+		<h3>Config</h3>
+		<table>
+			<tr>
+				<td>Mode:</td>
+				<td class="cfgMode">-</td>
+			</tr>
+			<tr>
+				<td>Number of half-cycles to do:</td>
+				<td class="cfgNbHalfCycles">-</td>
+			</tr>
+			<tr>
+				<td>Maximum charge duration:</td>
+				<td class="cfgUpDuration">-</td>
+			</tr>
+			<tr>
+				<td>Maximum discharge duration:</td>
+				<td class="cfgDownDuration">-</td>
+			</tr>
+			<tr>
+				<td>Target upper-bond voltage:</td>
+				<td class="cfgTopVoltage">-</td>
+			</tr>
+			<tr>
+				<td>Target lower-bond voltage:</td>
+				<td class="cfgBottomVoltage">-</td>
+			</tr>
+			<tr>
+				<td>Multi-cycle charge first:</td>
+				<td class="cfgChargeFirst">-</td>
+			</tr>
+		</table>
+	</section>
 {{end}}

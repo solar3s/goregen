@@ -68,15 +68,7 @@ liveChart.initFrom = function(url, selector) {
 		})
 		.get(function (xhr) {
 			var data = JSON.parse(xhr.response);
-			// past chart log
-			if (data["Measures"]) {
-				var measures = data["Measures"];
-				var interval = ((Date.parse(measures["End"]) - Date.parse(measures["Start"]))/1000)/measures.Data.length;
-				liveChart.init(selector, measures.Data, false, interval);
-			// live data
-			} else {
-				liveChart.init(selector, data, true, 15);
-			}
+			liveChart.init(selector, data, true, 15);
 		});
 };
 
@@ -128,17 +120,6 @@ liveChart.init = function (selector, data, reverse, intervalSec) {
 		.attr("dy", ".15em")
 		.attr("transform", "rotate(-45)");
 };
-
-function explorerChange(e) {
-	if (e.selectedOptions.length < 1) {
-		return;
-	}
-
-	var opt = e.selectedOptions[0];
-	if (!opt.dataset["error"]) {
-		liveChart.initFrom('/chart/' + opt.value, '#chart');
-	}
-}
 
 function durationString(seconds) {
 	var durationString = "";
