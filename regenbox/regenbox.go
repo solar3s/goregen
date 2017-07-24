@@ -77,9 +77,9 @@ type RegenBox struct {
 var DefaultConfig = Config{
 	Mode:          Charger,
 	NbHalfCycles:  10,
-	UpDuration:    util.Duration(time.Hour * 2),
-	DownDuration:  util.Duration(time.Hour * 2),
-	TopVoltage:    1410,
+	UpDuration:    util.Duration(time.Hour * 24),
+	DownDuration:  util.Duration(time.Hour * 24),
+	TopVoltage:    1500,
 	BottomVoltage: 900,
 	Ticker:        util.Duration(time.Second * 10),
 	ChargeFirst:   true,
