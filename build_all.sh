@@ -25,6 +25,7 @@ for os in "linux" "darwin" "windows"; do
     echo "building $os-$arch" >&2
     GOARCH=$arch GOOS=$os go build -o $target/$bin
     cp firmware/firmware.ino $target/
+    cp default.toml $target/config.toml
     cp README.md $target/
     cd $tmp
 
