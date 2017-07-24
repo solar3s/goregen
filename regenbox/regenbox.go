@@ -82,7 +82,7 @@ var DefaultConfig = Config{
 	TopVoltage:    1500,
 	BottomVoltage: 900,
 	Ticker:        util.Duration(time.Second * 10),
-	ChargeFirst:   true,
+	ChargeFirst:   false,
 }
 
 func NewConfig() *Config {

@@ -116,7 +116,6 @@ func init() {
 			log.Fatalf("error reading config \"%s\": %s", *cfgPath, err)
 		}
 		rootConfig = &web.DefaultConfig
-		rootConfig.Web.DataDir = filepath.Join(*rootPath, "data")
 		err = util.WriteTomlFile(rootConfig, *cfgPath)
 		if err != nil {
 			log.Fatalf("error creating config \"%s\": %s", *cfgPath, err)
@@ -131,10 +130,6 @@ func init() {
 	err = os.MkdirAll(rootConfig.Web.DataDir, 0755)
 	if err != nil {
 		log.Fatalf("couldn't mkdir \"%s\": %s", rootConfig.Web.DataDir, err)
-	}
-
-	if *verbose {
-		rootConfig.Web.Verbose = true
 	}
 
 	log.Printf("using config file: %s", *cfgPath)
@@ -163,7 +158,7 @@ func main() {
 	watcher.WatchConn()
 
 	log.Printf("starting webserver on http://%s ...", rootConfig.Web.ListenAddr)
-	go web.StartServer(Version, rbox, rootConfig, *cfgPath)
+	go web.StartServer(Version, rbox, rootConfig, *cfgPath, *verbose)
 
 	// small delay to allow for panic in StartServer
 	<-time.After(time.Millisecond * 500)

@@ -19,8 +19,8 @@ type Config struct {
 	User     User
 	Battery  Battery
 	Resistor int
-	Web      ServerConfig
 	Regenbox regenbox.Config
+	Web      ServerConfig
 	Watcher  regenbox.WatcherConfig
 	Serial   serial.Mode
 }

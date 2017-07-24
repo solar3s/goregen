@@ -27,16 +27,18 @@ const liveLog = "data.log"
 
 type ServerConfig struct {
 	ListenAddr        string
-	Verbose           bool
 	StaticDir         string
 	DataDir           string
 	WebsocketInterval util.Duration
 
+	verbose bool
 	version string
 }
 
 var DefaultServerConfig = ServerConfig{
 	ListenAddr:        "localhost:3636",
+	StaticDir:         "static",
+	DataDir:           "data",
 	WebsocketInterval: util.Duration(time.Second),
 }
 
@@ -82,11 +84,12 @@ type TemplateData struct {
 
 // StartServer starts a new http.Server using provided version, RegenBox & Config.
 // It either doesn't return or panics (http.Listen)
-func StartServer(version string, rbox *regenbox.RegenBox, cfg *Config, cfgPath string) {
+func StartServer(version string, rbox *regenbox.RegenBox, cfg *Config, cfgPath string, verbose bool) {
 	if cfg == nil {
 		cfg = &DefaultConfig
 	}
 	cfg.Web.version = version
+	cfg.Web.verbose = verbose
 	srv := &Server{
 		Config:   cfg,
 		Regenbox: rbox,
@@ -141,7 +144,6 @@ func StartServer(version string, rbox *regenbox.RegenBox, cfg *Config, cfgPath s
 	}()
 
 	// router
-	verbose := srv.Config.Web.Verbose
 	srv.router = mux.NewRouter()
 
 	// pprof handlers
@@ -210,7 +212,7 @@ func (s *Server) Websocket(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if s.Config.Web.Verbose {
+	if s.Config.Web.verbose {
 		log.Printf("websocket - subscription from %s (pollrate: %s)", conn.RemoteAddr(), interval)
 	}
 
@@ -236,7 +238,7 @@ func (s *Server) Websocket(w http.ResponseWriter, r *http.Request) {
 			// send regenbox state asap
 			err = conn.WriteJSON(data)
 			if err != nil {
-				if s.Config.Web.Verbose {
+				if s.Config.Web.verbose {
 					log.Printf("websocket - lost connection to %s", conn.RemoteAddr())
 				}
 				conn.Close()
@@ -330,7 +332,7 @@ func (s *Server) StartRegenbox(w http.ResponseWriter, r *http.Request) {
 		for {
 			select {
 			case sn = <-snaps:
-				if s.Config.Web.Verbose {
+				if s.Config.Web.verbose {
 					log.Println(sn)
 				}
 				// add to chart
@@ -462,7 +464,7 @@ func (s *Server) Charts(w http.ResponseWriter, r *http.Request) {
 	data := s.tplData
 	data.Link = HomeLink
 	data.Error, data.ChartLogs = ListChartLogs(s.Config.Web.DataDir)
-	if s.Config.Web.Verbose {
+	if s.Config.Web.verbose {
 		log.Printf("/charts: loaded %d chart log-infos from \"%s\"", len(data.ChartLogs), s.Config.Web.DataDir)
 	}
 	s.makeTplHandler(tplFiles, data, s.tplFuncs).ServeHTTP(w, r)
