@@ -5,7 +5,7 @@ For information about the __regenbox__ project or to pre-order hardware, go to h
 
 `goregen` is the web remote control interface for your `regenbox`
 
-![goregen](https://user-images.githubusercontent.com/1699009/28499430-0dd655ee-6fb6-11e7-9319-36dbac2c530a.png)
+![goregen](https://user-images.githubusercontent.com/1699009/28564780-684163c8-712a-11e7-80ae-c4ad9a9cc5ae.png)
 
 Slack
 -----
