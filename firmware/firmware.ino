@@ -59,10 +59,37 @@
 #define PIN_ANALOG    A0       // analog pin on battery-0 voltage
 
 // config parameters for getVoltage()
-#define CAN_REF       2460     // tension de reference du CAN
+#define CAN_REF       2410     // tension de reference du CAN
 #define CAN_BITSIZE   1023     // précision du CAN
-#define NB_ANALOG_RD  10       // how many analog read to measure average on
+#define NB_ANALOG_RD  204      // how many analog read to measure average 
 
+// Averaging parameters
+#define VOLTAGE_HISTORY_NUM  10 // Number of samples for averaging
+#define CHARGE_THRESHOLD       1500      // Charge threshold (mV)
+#define DECHARGE_THRESHOLD      900      // Decharge threshold (mV)
+
+unsigned long gVoltageHist[VOLTAGE_HISTORY_NUM];         // Voltage history
+unsigned long gHistCounter = 0;                  // Voltage measurement counter
+
+//-----------------------------------------------------------------------------
+//- Init voltage history
+//-----------------------------------------------------------------------------
+void initVoltageHist() {
+  for (byte i = 0; i < VOLTAGE_HISTORY_NUM; i++) {
+    gVoltageHist[i] = CHARGE_THRESHOLD;
+  }
+  gHistCounter = 0;
+}
+
+unsigned long computeAvgVoltage() {
+  unsigned long avgVoltage = 0;
+  for (byte i = 0; i < VOLTAGE_HISTORY_NUM; i++) {
+    avgVoltage += gVoltageHist[i];
+  }
+
+  avgVoltage = floor(avgVoltage / VOLTAGE_HISTORY_NUM);
+  return avgVoltage;
+}
 
 void setCharge(boolean b) {
   digitalWrite(PIN_CHARGE, !b);
@@ -91,11 +118,16 @@ unsigned long getVoltage() {
   for(byte i=0; i < NB_ANALOG_RD; i++){
     tmp = getAnalog();
     sum = sum + tmp;
+    delay(1);
   }
   sum = sum / NB_ANALOG_RD;
-  // conver using CAN specs and ref value
+  // convert using CAN specs and ref value
   sum = (sum * CAN_REF) / CAN_BITSIZE;
-  return sum;
+
+  gVoltageHist[gHistCounter % VOLTAGE_HISTORY_NUM] = sum;
+  gHistCounter++;
+  
+  return computeAvgVoltage();
 }
 
 // uint response
@@ -124,6 +156,8 @@ void setup() {
   setCharge(0);
   setDischarge(0);
   setLed(1);
+
+  initVoltageHist();
 }
 
 
