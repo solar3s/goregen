@@ -83,11 +83,20 @@ void initVoltageHist() {
 
 unsigned long computeAvgVoltage() {
   unsigned long avgVoltage = 0;
-  for (byte i = 0; i < VOLTAGE_HISTORY_NUM; i++) {
-    avgVoltage += gVoltageHist[i];
+
+  if (gHistCounter < VOLTAGE_HISTORY_NUM) {
+    for (byte i = 0; i <= gHistCounter; i++) {
+      avgVoltage += gVoltageHist[i];
+    }
+    avgVoltage = floor(avgVoltage / (gHistCounter + 1));
+  }
+  else {
+    for (byte i = 0; i < VOLTAGE_HISTORY_NUM; i++) {
+      avgVoltage += gVoltageHist[i];
+    }
+    avgVoltage = floor(avgVoltage / VOLTAGE_HISTORY_NUM);
   }
 
-  avgVoltage = floor(avgVoltage / VOLTAGE_HISTORY_NUM);
   return avgVoltage;
 }
 
