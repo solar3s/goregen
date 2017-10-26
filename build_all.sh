@@ -1,6 +1,12 @@
 #!/bin/bash
 
+if ! test -d ".git"; then
+  echo "needs to be in root directory" >&2
+  exit 1
+fi
+
 tmp=$(mktemp -d)
+version=$(cat version.go |grep Version |sed 's,.\+ "\([[:alnum:].]\+\)",\1,')
 
 for os in "linux" "darwin" "windows"; do
   for arch in "amd64" "386" "arm"; do
@@ -29,7 +35,7 @@ for os in "linux" "darwin" "windows"; do
     cp README.md $target/
     cd $tmp
 
-    zipname="goregen-$os$post.zip"
+    zipname="goregen_${version}_$os$post.zip"
     echo "bundling builds/$zipname" >&2
     zip -r $zipname goregen/
     cd -
