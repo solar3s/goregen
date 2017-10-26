@@ -157,7 +157,8 @@ boolean sendBool(boolean v) {
 
 void setup() {
   Serial.begin(57600);
-
+  analogReference(EXTERNAL);          // reference de tension pour les mesures
+  
   pinMode(PIN_CHARGE, OUTPUT);
   pinMode(PIN_DISCHARGE, OUTPUT);
   pinMode(PIN_LED, OUTPUT);

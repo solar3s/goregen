@@ -18,14 +18,14 @@ Resistor = 10
   DownDuration = "24h0m0s"
   TopVoltage = 1500
   BottomVoltage = 900
-  Ticker = "10s"
+  Ticker = "60s"
   ChargeFirst = false
 
 [Web]
   ListenAddr = "localhost:3636"
   StaticDir = "static"
   DataDir = "data"
-  WebsocketInterval = "1s"
+  WebsocketInterval = "5s"
 
 [Watcher]
   ConnPollRate = "1s"
