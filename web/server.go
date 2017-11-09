@@ -358,6 +358,10 @@ func (s *Server) StartRegenbox(w http.ResponseWriter, r *http.Request) {
 				s.Unlock()
 
 				if msg.Final == true {
+					if len(datalog.Data) == 0 {
+						log.Print("Charge log empty, nothing was saved.")
+						return
+					}
 					chart := ChartLog{
 						User:          cfg.User,
 						Battery:       cfg.Battery,
