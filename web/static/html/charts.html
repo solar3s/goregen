@@ -17,6 +17,12 @@
 			<td>Data foler:</td>
 			<td class="ex exFolder">{{.DataDir}}</td>
 		</tr>
+		{{if .Error}}
+		<tr>
+			<td data-error>Error:</td>
+			<td data-error>{{.Error}}</td>
+		</tr>
+		{{end}}
 	</table>
 	<select id="explorer" onchange="explorerChange(this);" multiple>
 		{{range .ChartLogs}}

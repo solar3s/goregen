@@ -14,6 +14,10 @@
     font-style: normal;
 }
 
+[data-error] {
+    color: red;
+}
+
 td, button, p, li, span, a, h1, h2, h3, h4, h5, select {
     font-family: 'agency', sans-serif;
     font-size: 19px;
