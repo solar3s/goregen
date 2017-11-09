@@ -13,7 +13,7 @@ import (
 type ChartLog struct {
 	User          User
 	Battery       Battery
-	Resistor      int
+	Resistor      util.Float
 	CycleType     string
 	TargetReached bool
 	Reason        string

@@ -1,6 +1,7 @@
 package web
 
 import (
+	"github.com/rkjdid/util"
 	"github.com/solar3s/goregen/regenbox"
 	"go.bug.st/serial.v1"
 )
@@ -18,7 +19,7 @@ var DefaultConfig = Config{
 type Config struct {
 	User     User
 	Battery  Battery
-	Resistor int
+	Resistor util.Float
 	Regenbox regenbox.Config
 	Web      ServerConfig
 	Watcher  regenbox.WatcherConfig
