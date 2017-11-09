@@ -20,6 +20,8 @@
   },
   "homepage": "https://github.com/solar3s/goregen#readme",
   "dependencies": {
-    "d3": "^4.8.0"
+    "d3": "^4.8.0",
+    "moment": "^2.19.1",
+    "moment-duration-format": "^1.3.0"
   }
 }

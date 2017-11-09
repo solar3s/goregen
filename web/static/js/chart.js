@@ -106,7 +106,7 @@ liveChart.init = function (selector, data, reverse, intervalSec) {
 	};
 
 	var normalAxis = function(d) {
-		return durationString(d*intervalSec);
+		return moment.duration(d*intervalSec, "seconds").format("h[h]m[m]s[s]");
 	};
 
 	// x axis
@@ -120,23 +120,3 @@ liveChart.init = function (selector, data, reverse, intervalSec) {
 		.attr("dy", ".15em")
 		.attr("transform", "rotate(-45)");
 };
-
-function durationString(seconds) {
-	var durationString = "";
-	var secs = Number(seconds).toFixed(0);
-	var hours, minutes;
-	if (secs >= 3600) {
-		hours = Number(secs / 3600).toFixed(0);
-		secs -= hours * 3600;
-		durationString += "" + hours + "h ";
-		minutes = Number(secs / 60).toFixed(0);
-		secs -= minutes;
-		durationString += "" + minutes + "m ";
-	} else if (secs >= 60) {
-		minutes = Number(secs / 60).toFixed(0);
-		secs -= (minutes*60);
-		durationString += "" + minutes + "m ";
-	}
-	durationString += Number(secs).toFixed(0) + "s";
-	return durationString;
-}
