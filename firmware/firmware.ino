@@ -59,44 +59,25 @@
 #define PIN_ANALOG    A0       // analog pin on battery-0 voltage
 
 // config parameters for getVoltage()
-#define CAN_REF       2410     // tension de reference du CAN
-#define CAN_BITSIZE   1023     // précision du CAN
-#define NB_ANALOG_RD  204      // how many analog read to measure average 
+#define CAN_REF       2410 // tension de reference du CAN
+#define CAN_BITSIZE   1023 // précision du CAN
+#define NB_ANALOG_RD  204  // how many analog read to measure average
 
 // Averaging parameters
-#define VOLTAGE_HISTORY_NUM  10 // Number of samples for averaging
-#define CHARGE_THRESHOLD       1500      // Charge threshold (mV)
-#define DECHARGE_THRESHOLD      900      // Decharge threshold (mV)
-
-unsigned long gVoltageHist[VOLTAGE_HISTORY_NUM];         // Voltage history
+#define VOLTAGE_HISTORY_NUM  10                  // Number of samples for averaging
+unsigned long gVoltageHist[VOLTAGE_HISTORY_NUM]; // Voltage history
 unsigned long gHistCounter = 0;                  // Voltage measurement counter
 
-//-----------------------------------------------------------------------------
-//- Init voltage history
-//-----------------------------------------------------------------------------
-void initVoltageHist() {
-  for (byte i = 0; i < VOLTAGE_HISTORY_NUM; i++) {
-    gVoltageHist[i] = CHARGE_THRESHOLD;
-  }
-  gHistCounter = 0;
-}
-
+// computeAvgVoltage retreive the previous last
+// VOLTAGE_HISTORY_NUM measures and averages on that
 unsigned long computeAvgVoltage() {
   unsigned long avgVoltage = 0;
-
-  if (gHistCounter < VOLTAGE_HISTORY_NUM) {
-    for (byte i = 0; i <= gHistCounter; i++) {
-      avgVoltage += gVoltageHist[i];
-    }
-    avgVoltage = floor(avgVoltage / (gHistCounter + 1));
+  byte sz = gHistCounter < VOLTAGE_HISTORY_NUM?
+    gHistCounter: VOLTAGE_HISTORY_NUM;
+  for (byte i = 0; i < sz; i++) {
+    avgVoltage += gVoltageHist[i];
   }
-  else {
-    for (byte i = 0; i < VOLTAGE_HISTORY_NUM; i++) {
-      avgVoltage += gVoltageHist[i];
-    }
-    avgVoltage = floor(avgVoltage / VOLTAGE_HISTORY_NUM);
-  }
-
+  avgVoltage = floor(avgVoltage / sz);
   return avgVoltage;
 }
 
@@ -157,8 +138,9 @@ boolean sendBool(boolean v) {
 
 void setup() {
   Serial.begin(57600);
-  analogReference(EXTERNAL);          // reference de tension pour les mesures
-  
+  // reference de tension pour les mesures
+  analogReference(EXTERNAL);
+
   pinMode(PIN_CHARGE, OUTPUT);
   pinMode(PIN_DISCHARGE, OUTPUT);
   pinMode(PIN_LED, OUTPUT);
@@ -166,8 +148,6 @@ void setup() {
   setCharge(0);
   setDischarge(0);
   setLed(1);
-
-  initVoltageHist();
 }
 
 
@@ -229,5 +209,6 @@ void loop() {
       return;
   }
 
+  // end communication
   Serial.write(STOP_BYTE);
 }
