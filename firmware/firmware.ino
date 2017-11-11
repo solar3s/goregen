@@ -8,6 +8,7 @@
       https://github.com/solar3s/goregen/wiki/Upgrading-firmware
 -----------------------------------------------------------------------*/
 
+#define VERSION "cathode"
 
 /*---------------------------------------------------------------------*
   Provides direct pin access via simple serial protocol
@@ -31,6 +32,7 @@
 // READ_* writes string response
 #define READ_A0         0x00 // read A0 pin
 #define READ_V          0x01 // fancy A0 reads and compute voltage
+#define READ_VERSION    0x02 // returns current firmware version
 
 // LED_TOGGLE writes boolean response (led state)
 #define LED_TOGGLE      0x12 // led toggle
@@ -143,6 +145,9 @@ void loop() {
 
   byte in = Serial.read();
   switch (in) {
+    case READ_VERSION:
+      Serial.print(VERSION);
+      break;
     case READ_A0:
       Serial.print(getAnalog());
       break;
