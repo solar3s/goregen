@@ -71,20 +71,18 @@ func init() {
 		*rootPath = filepath.Dir(exe)
 	}
 
-	for _, v := range []string{*rootPath} {
-		err := os.MkdirAll(v, 0755)
-		if err != nil {
-			log.Fatalf("couldn't mkdir \"%s\": %s", v, err)
-		}
+	err := os.MkdirAll(*rootPath, 0755)
+	if err != nil {
+		log.Fatalf("couldn't mkdir root directory \"%s\": %s", *rootPath, err)
 	}
 
 	// create log file
 	if *logDir == "" {
 		*logDir = filepath.Join(*rootPath, "log")
 	}
-	err := os.MkdirAll(*logDir, 0755)
+	err = os.MkdirAll(*logDir, 0755)
 	if err != nil {
-		log.Fatalf("couldn't mkdir \"%s\": %s", *logDir, err)
+		log.Fatalf("couldn't mkdir log directory \"%s\": %s", *logDir, err)
 	}
 
 	logPath := filepath.Join(*logDir, time.Now().Format("2006-01-02_15h04m05.log"))
@@ -94,19 +92,21 @@ func init() {
 	}
 
 	// create log link
-	logLink := filepath.Join(*rootPath, "goregen.log")
+	link := "goregen.log"
+	logLink := filepath.Join(*rootPath, link)
 	_ = os.Remove(logLink)
 	err = os.Symlink(logPath, logLink)
 	if err != nil {
 		err = os.Link(logPath, logLink)
 		if err != nil {
-			log.Fatalf("couldn't create goregen.log link: %s", err)
+			log.Fatalf("couldn't create \"%s\" link: %s", link, err)
 		}
 	}
 
 	// log to both Stderr & logFile
 	log.SetOutput(io.MultiWriter(logFile, os.Stderr))
 
+	// load config
 	if *cfgPath == "" {
 		*cfgPath = filepath.Join(*rootPath, "config.toml")
 	}
@@ -118,7 +118,7 @@ func init() {
 		rootConfig = &web.DefaultConfig
 		err = util.WriteTomlFile(rootConfig, *cfgPath)
 		if err != nil {
-			log.Fatalf("error creating config \"%s\": %s", *cfgPath, err)
+			log.Fatalf("error creating config file \"%s\": %s", *cfgPath, err)
 		}
 		log.Printf("created new config file \"%s\"", *cfgPath)
 	}
@@ -129,7 +129,7 @@ func init() {
 	}
 	err = os.MkdirAll(rootConfig.Web.DataDir, 0755)
 	if err != nil {
-		log.Fatalf("couldn't mkdir \"%s\": %s", rootConfig.Web.DataDir, err)
+		log.Fatalf("couldn't mkdir Web.DataDir \"%s\": %s", rootConfig.Web.DataDir, err)
 	}
 
 	log.Printf("using config file: %s", *cfgPath)
