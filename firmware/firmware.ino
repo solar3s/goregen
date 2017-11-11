@@ -120,22 +120,6 @@ unsigned long getVoltage() {
   return computeAvgVoltage();
 }
 
-// uint response
-boolean sendUint(unsigned long v) {
-  if (Serial.print(v) <= 0) {
-    return false;
-  }
-  return true;
-}
-
-// boolean response
-boolean sendBool(boolean v) {
-  if (Serial.write(v) <= 0) {
-    return false;
-  }
-  return true;
-}
-
 void setup() {
   Serial.begin(57600);
   // reference de tension pour les mesures
@@ -160,10 +144,10 @@ void loop() {
   byte in = Serial.read();
   switch (in) {
     case READ_A0:
-      sendUint(getAnalog());
+      Serial.print(getAnalog());
       break;
     case READ_V:
-      sendUint(getVoltage());
+      Serial.print(getVoltage());
       break;
 
     case LED_0:
@@ -173,7 +157,7 @@ void loop() {
       setLed(1);
       break;
     case LED_TOGGLE:
-      sendBool(toggleLed());
+      Serial.write(toggleLed());
       break;
 
     case PIN_DISCHARGE_0:
