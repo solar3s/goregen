@@ -29,7 +29,9 @@
 		<option
 				data-betaid="{{.User.BetaId}}" value="{{.Path}}">{{.String}}</option>
 		{{else}}
+		{{if not .Error}}
 		<option data-error="true">no logs found in data foler</option>
+		{{end}}
 		{{end}}
 	</select>
 	<section class="config">
