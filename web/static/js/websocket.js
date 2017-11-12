@@ -30,6 +30,15 @@ stateSocket.start = function() {
 	ws.onerror = function (e) {
 		console.log('websocket error', e);
 	};
+
+	var clearRegenboxState = function() {
+		d3.selectAll('.vVoltage').html('-');
+		d3.selectAll('.vRawVoltage').html('');
+		d3.selectAll('.vChargeState').html('-');
+		d3.selectAll('.vFirmware').html('-');
+		d3.selectAll('.ctrl').attr('disabled', '');
+	};
+
 	ws.onmessage = function (e) {
 		var v = JSON.parse(e.data);
 		switch(v.Type) {
@@ -44,11 +53,7 @@ stateSocket.start = function() {
 				var state = v.Data['State'];
 				d3.selectAll('.vState').html(state);
 				if (state !== 'Connected') {
-					d3.selectAll('.vVoltage').html('-');
-					d3.selectAll('.vRawVoltage').html('');
-					d3.selectAll('.vChargeState').html('-');
-					d3.selectAll('.vFirmware').html('-');
-					d3.selectAll('.ctrl').attr('disabled', '');
+					clearRegenboxState();
 					return;
 				}
 
@@ -87,10 +92,7 @@ stateSocket.start = function() {
 	};
 	ws.onclose = function (e) {
 		d3.selectAll('.vState').html('no connection to goregen');
-		d3.selectAll('.vVoltage').html('-');
-		d3.selectAll('.vRawVoltage').html('');
-		d3.selectAll('.vChargeState').html('-');
-		d3.selectAll('.ctrl').attr('disabled', '');
+		clearRegenboxState();
 		d3.selectAll('.ws').html(stateSocket.reconnectButton);
 		ws.onclose = null;
 		ws.onerror = null;
