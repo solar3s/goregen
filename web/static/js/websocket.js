@@ -47,6 +47,7 @@ stateSocket.start = function() {
 					d3.selectAll('.vVoltage').html('-');
 					d3.selectAll('.vRawVoltage').html('');
 					d3.selectAll('.vChargeState').html('-');
+					d3.selectAll('.vFirmware').html('-');
 					d3.selectAll('.ctrl').attr('disabled', '');
 					return;
 				}
@@ -55,6 +56,7 @@ stateSocket.start = function() {
 				d3.selectAll('.vVoltage').html(v.Data['Voltage'] + 'mV');
 				d3.selectAll('.vRawVoltage').html(v.Data['Voltage']);
 				d3.selectAll('.vChargeState').html(charge);
+				d3.selectAll('.vFirmware').html(v.Data['Firmware']);
 				d3.selectAll('.ctrl.cUp').attr('disabled', charge !== 'Idle' ? '' : null);
 				d3.selectAll('.ctrl.cDown').attr('disabled', charge === 'Idle' ? '' : null);
 				return;

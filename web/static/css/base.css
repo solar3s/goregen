@@ -140,6 +140,15 @@ table.overview td {
     font-style: italic;
 }
 
+.vFirmware {
+    opacity: 0.65;
+}
+
+.vFirmware:empty:after {
+    content: "outdated";
+    color: rgba(255, 0, 0, 0.75);
+}
+
 .controls {
     margin: 10px 0 25px 15px;
 }

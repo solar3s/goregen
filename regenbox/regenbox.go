@@ -48,6 +48,7 @@ type Snapshot struct {
 	Voltage     int
 	ChargeState ChargeState
 	State       State
+	Firmware    string
 }
 
 type Config struct {
@@ -68,6 +69,7 @@ type RegenBox struct {
 	chargeState ChargeState
 	state       State
 	wg          sync.WaitGroup
+	firmware    []byte
 
 	stop     chan struct{}
 	snapChan chan Snapshot
@@ -106,6 +108,8 @@ func NewRegenBox(conn *SerialConnection, cfg *Config) (rb *RegenBox, err error) 
 	}
 	if conn == nil {
 		rb.state = Disconnected
+	} else if rb.firmware == nil {
+		rb.firmware, _ = rb.talk(ReadFirmware)
 	}
 	return rb, err
 }
@@ -124,6 +128,7 @@ func (rb *RegenBox) TestConnection() (_ time.Duration, err error) {
 	for i := 0; i < pingRetries; i++ {
 		err = rb.ping()
 		if err == nil {
+			rb.firmware, _ = rb.talk(ReadFirmware)
 			break
 		}
 	}
@@ -323,8 +328,9 @@ func (rb *RegenBox) Stopped() bool {
 // Snapshot retreives the state of rb at a given time.
 func (rb *RegenBox) Snapshot() Snapshot {
 	s := Snapshot{
-		Time:  time.Now(),
-		State: rb.State(),
+		Time:     time.Now(),
+		State:    rb.State(),
+		Firmware: string(rb.firmware),
 	}
 	if s.State == NilBox {
 		return s
@@ -382,6 +388,10 @@ func (rb *RegenBox) ReadVoltage() (int, error) {
 		return -1, err
 	}
 	return strconv.Atoi(string(res))
+}
+
+func (rb *RegenBox) FirmwareVersion() string {
+	return string(rb.firmware)
 }
 
 func (rb *RegenBox) SetCharge() error {
