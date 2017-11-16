@@ -16,6 +16,7 @@ var ErrBoxRunning = errors.New("box is already running")
 var ErrCycleTimeout = errors.New("Timeout before reaching stop condition")
 var ErrUserStop = errors.New("Stopped by user")
 var ErrSnapshotSendTimeout = errors.New("Snapshot chan send timeout")
+var ErrFirmwareOutdated = errors.New("Firmware is probably out of date")
 
 //go:generate stringer -type=State,ChargeState,BotMode -output=types_string.go
 type State byte
@@ -70,6 +71,7 @@ type RegenBox struct {
 	state       State
 	wg          sync.WaitGroup
 	firmware    []byte
+	firmRetries int
 
 	stop     chan struct{}
 	snapChan chan Snapshot
@@ -108,8 +110,6 @@ func NewRegenBox(conn *SerialConnection, cfg *Config) (rb *RegenBox, err error) 
 	}
 	if conn == nil {
 		rb.state = Disconnected
-	} else if rb.firmware == nil {
-		rb.firmware, _ = rb.talk(ReadFirmware)
 	}
 	return rb, err
 }
@@ -117,6 +117,7 @@ func NewRegenBox(conn *SerialConnection, cfg *Config) (rb *RegenBox, err error) 
 const (
 	pingRetries     = 30
 	snapshotTimeout = time.Duration(time.Second * 5)
+	firmwareRetries = 5
 )
 
 // TestConnection sends a ping every testConnPoll,
@@ -127,10 +128,6 @@ func (rb *RegenBox) TestConnection() (_ time.Duration, err error) {
 	t0 := time.Now()
 	for i := 0; i < pingRetries; i++ {
 		err = rb.ping()
-		if err == nil {
-			rb.firmware, _ = rb.talk(ReadFirmware)
-			break
-		}
 	}
 	return time.Since(t0), err
 }
@@ -330,7 +327,7 @@ func (rb *RegenBox) Snapshot() Snapshot {
 	s := Snapshot{
 		Time:     time.Now(),
 		State:    rb.State(),
-		Firmware: string(rb.firmware),
+		Firmware: rb.FirmwareVersion(),
 	}
 	if s.State == NilBox {
 		return s
@@ -391,6 +388,9 @@ func (rb *RegenBox) ReadVoltage() (int, error) {
 }
 
 func (rb *RegenBox) FirmwareVersion() string {
+	if rb.firmware == nil && rb.state == Connected {
+		rb.setFirmware()
+	}
 	return string(rb.firmware)
 }
 
@@ -433,9 +433,29 @@ func (rb *RegenBox) SetChargeMode(mode byte) error {
 	return nil
 }
 
+func (rb *RegenBox) setFirmware() error {
+	if rb.firmRetries > firmwareRetries {
+		log.Println("firmware is out of date, please update at https://github.com/solar3s/goregen")
+		rb.firmware = []byte("update me!")
+		return ErrFirmwareOutdated
+	}
+	var err error
+	rb.firmware, err = rb.talk(ReadFirmware)
+	if err == nil {
+		rb.firmRetries = 0
+	} else {
+		rb.firmRetries++
+	}
+	return err
+}
+
 // ping sends a ping to regenbox, returning error if something's wrong
 func (rb *RegenBox) ping() error {
 	_, err := rb.talk(Ping)
+	if err == nil && rb.firmware == nil {
+		// discard error
+		_ = rb.setFirmware()
+	}
 	return err
 }
 
