@@ -8,6 +8,7 @@
       https://github.com/solar3s/goregen/wiki/Upgrading-firmware
 -----------------------------------------------------------------------*/
 
+#define VERSION "cathode"
 
 /*---------------------------------------------------------------------*
   Provides direct pin access via simple serial protocol
@@ -31,6 +32,7 @@
 // READ_* writes string response
 #define READ_A0         0x00 // read A0 pin
 #define READ_V          0x01 // fancy A0 reads and compute voltage
+#define READ_VERSION    0x02 // returns current firmware version
 
 // LED_TOGGLE writes boolean response (led state)
 #define LED_TOGGLE      0x12 // led toggle
@@ -59,44 +61,25 @@
 #define PIN_ANALOG    A0       // analog pin on battery-0 voltage
 
 // config parameters for getVoltage()
-#define CAN_REF       2410     // tension de reference du CAN
-#define CAN_BITSIZE   1023     // précision du CAN
-#define NB_ANALOG_RD  204      // how many analog read to measure average 
+#define CAN_REF       2410 // tension de reference du CAN
+#define CAN_BITSIZE   1023 // précision du CAN
+#define NB_ANALOG_RD  204  // how many analog read to measure average
 
 // Averaging parameters
-#define VOLTAGE_HISTORY_NUM  10 // Number of samples for averaging
-#define CHARGE_THRESHOLD       1500      // Charge threshold (mV)
-#define DECHARGE_THRESHOLD      900      // Decharge threshold (mV)
-
-unsigned long gVoltageHist[VOLTAGE_HISTORY_NUM];         // Voltage history
+#define VOLTAGE_HISTORY_NUM  10                  // Number of samples for averaging
+unsigned long gVoltageHist[VOLTAGE_HISTORY_NUM]; // Voltage history
 unsigned long gHistCounter = 0;                  // Voltage measurement counter
 
-//-----------------------------------------------------------------------------
-//- Init voltage history
-//-----------------------------------------------------------------------------
-void initVoltageHist() {
-  for (byte i = 0; i < VOLTAGE_HISTORY_NUM; i++) {
-    gVoltageHist[i] = CHARGE_THRESHOLD;
-  }
-  gHistCounter = 0;
-}
-
+// computeAvgVoltage retreive the previous last
+// VOLTAGE_HISTORY_NUM measures and averages on that
 unsigned long computeAvgVoltage() {
   unsigned long avgVoltage = 0;
-
-  if (gHistCounter < VOLTAGE_HISTORY_NUM) {
-    for (byte i = 0; i <= gHistCounter; i++) {
-      avgVoltage += gVoltageHist[i];
-    }
-    avgVoltage = floor(avgVoltage / (gHistCounter + 1));
+  byte sz = gHistCounter < VOLTAGE_HISTORY_NUM?
+    gHistCounter: VOLTAGE_HISTORY_NUM;
+  for (byte i = 0; i < sz; i++) {
+    avgVoltage += gVoltageHist[i];
   }
-  else {
-    for (byte i = 0; i < VOLTAGE_HISTORY_NUM; i++) {
-      avgVoltage += gVoltageHist[i];
-    }
-    avgVoltage = floor(avgVoltage / VOLTAGE_HISTORY_NUM);
-  }
-
+  avgVoltage = floor(avgVoltage / sz);
   return avgVoltage;
 }
 
@@ -139,26 +122,11 @@ unsigned long getVoltage() {
   return computeAvgVoltage();
 }
 
-// uint response
-boolean sendUint(unsigned long v) {
-  if (Serial.print(v) <= 0) {
-    return false;
-  }
-  return true;
-}
-
-// boolean response
-boolean sendBool(boolean v) {
-  if (Serial.write(v) <= 0) {
-    return false;
-  }
-  return true;
-}
-
 void setup() {
   Serial.begin(57600);
-  analogReference(EXTERNAL);          // reference de tension pour les mesures
-  
+  // reference de tension pour les mesures
+  analogReference(EXTERNAL);
+
   pinMode(PIN_CHARGE, OUTPUT);
   pinMode(PIN_DISCHARGE, OUTPUT);
   pinMode(PIN_LED, OUTPUT);
@@ -166,8 +134,6 @@ void setup() {
   setCharge(0);
   setDischarge(0);
   setLed(1);
-
-  initVoltageHist();
 }
 
 
@@ -179,11 +145,14 @@ void loop() {
 
   byte in = Serial.read();
   switch (in) {
+    case READ_VERSION:
+      Serial.print(VERSION);
+      break;
     case READ_A0:
-      sendUint(getAnalog());
+      Serial.print(getAnalog());
       break;
     case READ_V:
-      sendUint(getVoltage());
+      Serial.print(getVoltage());
       break;
 
     case LED_0:
@@ -193,7 +162,7 @@ void loop() {
       setLed(1);
       break;
     case LED_TOGGLE:
-      sendBool(toggleLed());
+      Serial.write(toggleLed());
       break;
 
     case PIN_DISCHARGE_0:
@@ -229,5 +198,6 @@ void loop() {
       return;
   }
 
+  // end communication
   Serial.write(STOP_BYTE);
 }

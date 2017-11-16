@@ -10,6 +10,7 @@ const (
 const (
 	ReadA0 byte = 0x00 | iota
 	ReadVoltage
+	ReadFirmware
 )
 
 const (

@@ -80,6 +80,7 @@ type TemplateData struct {
 	ChartLogs []ChartLogInfo
 	Error     error
 	Version   string
+	Firmware  string
 }
 
 // StartServer starts a new http.Server using provided version, RegenBox & Config.
@@ -105,7 +106,7 @@ func StartServer(version string, rbox *regenbox.RegenBox, cfg *Config, cfgPath s
 		"html": srv.RenderHtml,
 	}
 	srv.tplData = TemplateData{
-		srv.Config, ChartsLink, cfg.Web.DataDir, nil, nil, nil, version,
+		srv.Config, ChartsLink, cfg.Web.DataDir, nil, nil, nil, version, rbox.FirmwareVersion(),
 	}
 	srv.cycleSubs = make(map[int]chan regenbox.CycleMessage)
 
