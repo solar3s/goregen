@@ -61,7 +61,8 @@
 #define PIN_ANALOG    A0       // analog pin on battery-0 voltage
 
 // config parameters for getVoltage()
-#define CAN_REF       2410 // tension de reference du CAN
+unsigned long AREF = 2410; // reference voltage, this is a default value,
+                           //   it will be auto-calibrated below with initAref()
 #define CAN_BITSIZE   1023 // précision du CAN
 #define NB_ANALOG_RD  204  // how many analog read to measure average
 
@@ -122,10 +123,62 @@ unsigned long getVoltage() {
   return computeAvgVoltage();
 }
 
+// initAref is a guru trick taken on : https://forum.arduino.cc/index.php?topic=267827.msg1889127#msg1889127
+// it retreives AREF value (otherwise unavailable for reading) by doing registry & mux manipulation tricks.
+unsigned long initAref() {
+  float volt;
+
+#if defined (__AVR_ATmega8__)
+#elif defined (__AVR_ATmega168__)
+#elif defined (__AVR_ATmega168A__)
+#elif defined (__AVR_ATmega168P__)
+#elif defined (__AVR_ATmega328__)
+#elif defined (__AVR_ATmega328P__)
+
+  // set reference to AREF, and mux to read the internal 1.1V
+  // REFS1 = 0, REFS0 = 0, MUX3..0 = 1110
+  ADMUX = _BV(MUX3) | _BV(MUX2) | _BV(MUX1);
+
+  // Enable the ADC
+  ADCSRA |= _BV(ADEN);
+
+  // Wait for voltage to become stable after changing the mux.
+  delay(20);
+
+  // Start ADC
+  ADCSRA |= _BV(ADSC);
+
+  // wait for the ADC to finish
+  while (bit_is_set(ADCSRA, ADSC));
+
+  // Read the ADC result
+  // The 16-bit ADC register is 'ADC' or 'ADCW'
+  unsigned int raw = ADCW;
+
+  // Calculate the Aref.
+  volt = 1100.0 / (float) raw * 1024.0;
+
+#elif defined (__AVR_ATmega32U4__)
+#elif defined (__AVR_ATmega1280__) || defined (__AVR_ATmega2560__)
+#endif
+
+  // Try to return to normal.
+  analogReference(EXTERNAL);
+  analogRead(A0);            // the mux is set, throw away ADC value
+  delay(20);                 // wait for voltages to become stable
+
+  return floor(volt);
+}
+
 void setup() {
   Serial.begin(57600);
-  // reference de tension pour les mesures
-  analogReference(EXTERNAL);
+
+  // set AREF value
+  AREF = initAref();
+
+  // /!\ do not attempt analogRead() before analogReference(EXTERNAL) is called (initAref does that)
+  //     if your AREF is actually supplied a voltage (which should be the case for regenbox)
+
 
   pinMode(PIN_CHARGE, OUTPUT);
   pinMode(PIN_DISCHARGE, OUTPUT);
