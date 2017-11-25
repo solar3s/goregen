@@ -194,8 +194,8 @@ void loop() {
     case PING:
       break;
     default:
-      // do not talk to strangers
-      return;
+      // nothing to say
+      break;
   }
 
   // end communication
