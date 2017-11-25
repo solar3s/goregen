@@ -19,7 +19,7 @@
     - On other pin instructions: write 1 single 0 byte (always success)
         (LED_0/1, PIN_DISCHARGE_0/1, PIN_CHARGE_0/1, MODE_*)
     - On uint readings: write ascii repr of value
-        (READ_A0, READ_V)
+        (READ_A0, READ_V, READ_VERSION)
 
   All communication end with STOP_BYTE
 
