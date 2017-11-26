@@ -8,7 +8,7 @@
       https://github.com/solar3s/goregen/wiki/Upgrading-firmware
 -----------------------------------------------------------------------*/
 
-#define VERSION "cathode"
+#define VERSION "anode"
 
 /*---------------------------------------------------------------------*
   Provides direct pin access via simple serial protocol
@@ -60,68 +60,9 @@
 #define PIN_LED       13       // output pin address (arduino led)
 #define PIN_ANALOG    A0       // analog pin on battery-0 voltage
 
-// config parameters for getVoltage()
+#define CAN_BITSIZE  1023  // précision du CAN
 unsigned long AREF = 2410; // reference voltage, this is a default value,
                            //   it will be auto-calibrated below with initAref()
-#define CAN_BITSIZE   1023 // précision du CAN
-#define NB_ANALOG_RD  204  // how many analog read to measure average
-
-// Averaging parameters
-#define VOLTAGE_HISTORY_NUM  10                  // Number of samples for averaging
-unsigned long gVoltageHist[VOLTAGE_HISTORY_NUM]; // Voltage history
-unsigned long gHistCounter = 0;                  // Voltage measurement counter
-
-// computeAvgVoltage retreive the previous last
-// VOLTAGE_HISTORY_NUM measures and averages on that
-unsigned long computeAvgVoltage() {
-  unsigned long avgVoltage = 0;
-  byte sz = gHistCounter < VOLTAGE_HISTORY_NUM?
-    gHistCounter: VOLTAGE_HISTORY_NUM;
-  for (byte i = 0; i < sz; i++) {
-    avgVoltage += gVoltageHist[i];
-  }
-  avgVoltage = floor(avgVoltage / sz);
-  return avgVoltage;
-}
-
-void setCharge(boolean b) {
-  digitalWrite(PIN_CHARGE, !b);
-}
-
-void setDischarge(boolean b) {
-  digitalWrite(PIN_DISCHARGE, b);
-}
-
-void setLed(boolean b) {
-  digitalWrite(PIN_LED, b);
-}
-
-boolean toggleLed() {
-  boolean b = !digitalRead(PIN_LED);
-  setLed(b);
-  return b;
-}
-
-unsigned long getAnalog() {
-  return analogRead(PIN_ANALOG);
-}
-
-unsigned long getVoltage() {
-  unsigned long tmp, sum;
-  for(byte i=0; i < NB_ANALOG_RD; i++){
-    tmp = getAnalog();
-    sum = sum + tmp;
-    delay(1);
-  }
-  sum = sum / NB_ANALOG_RD;
-  // convert using CAN specs and ref value
-  sum = (sum * CAN_REF) / CAN_BITSIZE;
-
-  gVoltageHist[gHistCounter % VOLTAGE_HISTORY_NUM] = sum;
-  gHistCounter++;
-  
-  return computeAvgVoltage();
-}
 
 // initAref is a guru trick taken on : https://forum.arduino.cc/index.php?topic=267827.msg1889127#msg1889127
 // it retreives AREF value (otherwise unavailable for reading) by doing registry & mux manipulation tricks.
@@ -170,6 +111,92 @@ unsigned long initAref() {
   return floor(volt);
 }
 
+void setCharge(boolean b) {
+  digitalWrite(PIN_CHARGE, !b);
+}
+
+void setDischarge(boolean b) {
+  digitalWrite(PIN_DISCHARGE, b);
+}
+
+void setLed(boolean b) {
+  digitalWrite(PIN_LED, b);
+}
+
+boolean toggleLed() {
+  boolean b = !digitalRead(PIN_LED);
+  setLed(b);
+  return b;
+}
+
+// getAnalog performs a single voltage reading on A0. The value
+// is quite volatile, when in doubt, prefere getVoltage which
+// constantly computes smart average, smoothing the output curve.
+int getAnalog() {
+  return floor(analogRead(PIN_ANALOG) * AREF / CAN_BITSIZE);
+}
+
+// chunk type is basically an array with add & average facilities
+struct chunk {
+  int size;
+  int index;
+  int *data;
+  bool full;
+
+  chunk(int _size): size(_size) {
+    this->data = new int[_size];
+  }
+
+  // add inserts value to this.data, when a chunk is full
+  // set full to true and return true also.
+  bool add(int value) {
+    this->data[this->index++] = value;
+    if (this->index >= this->size) {
+      this->full = true;
+      this->index = 0;
+      return true;
+    }
+    return false;
+  }
+
+  // average computes average value of this.data
+  int average() {
+    int upperBound = this->full? this->size: this->index;
+    long avg = 0;
+    for (int i = 0; i < upperBound; i++) {
+      avg += this->data[i];
+    }
+    return floor(double(avg) / double(upperBound));
+  }
+};
+
+#define AVG_CHUNK_SIZE   50
+#define AVG_TOTAL_CHUNKS 50
+chunk* currentChunk = new chunk(AVG_CHUNK_SIZE);
+chunk* totalChunk = new chunk(AVG_TOTAL_CHUNKS);
+
+int ComputedVoltage = 0; // constantly updated voltage value
+
+// getVoltage just outputs computed average voltage.
+int getVoltage() {
+  return ComputedVoltage;
+}
+
+// tick is called constantly when nothing is available on serial
+void tick() {
+  bool isChunkFull = currentChunk->add(getAnalog());
+  if (isChunkFull) {
+    // add full chunk to totalChunks
+    totalChunk->add(currentChunk->average());
+    // recompute average voltage
+    ComputedVoltage = totalChunk->average();
+  } else if (!currentChunk->full) {
+    // recompute voltage at every tick until
+    // currentChunk has been filled once
+    ComputedVoltage = currentChunk->average();
+  }
+}
+
 void setup() {
   Serial.begin(57600);
 
@@ -187,12 +214,18 @@ void setup() {
   setCharge(0);
   setDischarge(0);
   setLed(1);
-}
 
+  // insert a few ticks before starting
+  tick();
+  delay(5);
+  tick();
+}
 
 // simple talk protocol
 void loop() {
+  delay(5);
   if (!Serial.available()) {
+    tick();
     return;
   }
 
