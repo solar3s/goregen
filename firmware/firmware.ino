@@ -197,6 +197,7 @@ void tick() {
   }
 }
 
+// setup is called at arduino's startup
 void setup() {
   Serial.begin(57600);
 
@@ -221,7 +222,7 @@ void setup() {
   tick();
 }
 
-// simple talk protocol
+// main loop for arduino, keeps computing voltage (tick()) until Serial.available
 void loop() {
   delay(1);
   if (!Serial.available()) {
