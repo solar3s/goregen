@@ -170,8 +170,8 @@ struct chunk {
   }
 };
 
-#define AVG_CHUNK_SIZE   50
-#define AVG_TOTAL_CHUNKS 50
+#define AVG_CHUNK_SIZE   25
+#define AVG_TOTAL_CHUNKS 40
 chunk* currentChunk = new chunk(AVG_CHUNK_SIZE);
 chunk* totalChunk = new chunk(AVG_TOTAL_CHUNKS);
 
@@ -223,7 +223,7 @@ void setup() {
 
 // simple talk protocol
 void loop() {
-  delay(5);
+  delay(1);
   if (!Serial.available()) {
     tick();
     return;
