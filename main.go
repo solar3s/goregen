@@ -58,7 +58,7 @@ func init() {
 		if err != nil {
 			log.Fatal("error opening serial port: ", err)
 		}
-		conn = regenbox.NewSerial(port, config, *device)
+		conn = regenbox.NewSerial(port, config, *device, true)
 		conn.Start()
 	}
 

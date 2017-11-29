@@ -27,6 +27,7 @@ type SerialConnection struct {
 
 	serial.Port
 	path   string
+	locked bool
 	config serial.Mode
 
 	rdChan    chan []byte
@@ -36,9 +37,10 @@ type SerialConnection struct {
 	wg        sync.WaitGroup
 }
 
-func NewSerial(port serial.Port, config serial.Mode, name string) *SerialConnection {
+func NewSerial(port serial.Port, config serial.Mode, name string, lockPort bool) *SerialConnection {
 	return &SerialConnection{
 		Port:      port,
+		locked:    lockPort,
 		path:      name,
 		config:    config,
 		rdChan:    make(chan []byte),
@@ -187,7 +189,7 @@ func FindSerial(config *serial.Mode) (*SerialConnection, error) {
 		port, err = serial.Open(v, config)
 		if err == nil {
 			log.Printf("trying \"%s\"...", v)
-			conn := NewSerial(port, *config, v)
+			conn := NewSerial(port, *config, v, false)
 			conn.ReadTimeout = time.Millisecond * 50
 			conn.WriteTimeout = time.Millisecond * 50
 			conn.Start()
