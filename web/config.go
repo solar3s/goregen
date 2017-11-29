@@ -23,6 +23,7 @@ type Config struct {
 	Regenbox regenbox.Config
 	Web      ServerConfig
 	Watcher  regenbox.WatcherConfig
+	Device   string
 	Serial   serial.Mode
 }
 

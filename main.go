@@ -20,7 +20,7 @@ var (
 )
 
 var (
-	device     = flag.String("dev", "", "path to serial port, if empty it will be searched automatically")
+	device     = flag.String("dev", "-", "path to serial port, if empty it will be searched automatically")
 	rootPath   = flag.String("root", "", "path to goregen's main directory (defaults to executable path)")
 	cfgPath    = flag.String("config", "", "path to config (defaults to <root>/config.toml)")
 	assetsPath = flag.String("assets", "", "restore static assets to provided directory & exit")
@@ -50,16 +50,6 @@ func init() {
 			log.Println("use it as Web.StaticDir value in config to prioritize extracted static assets")
 			os.Exit(0)
 		}
-	}
-
-	// force provided -dev flag
-	if *device != "" {
-		port, config, err := regenbox.OpenPortName(*device)
-		if err != nil {
-			log.Fatal("error opening serial port: ", err)
-		}
-		conn = regenbox.NewSerial(port, config, *device)
-		conn.Start()
 	}
 
 	// root directory for goregen
@@ -123,6 +113,21 @@ func init() {
 		log.Printf("created new config file \"%s\"", *cfgPath)
 	}
 
+	// override device from -dev flag
+	if *device != "-" {
+		rootConfig.Device = *device
+	}
+	// explicit device address
+	if rootConfig.Device != "" {
+		dev := rootConfig.Device
+		port, config, err := regenbox.OpenPortName(dev)
+		if err != nil {
+			log.Fatal("error opening serial port: ", err)
+		}
+		conn = regenbox.NewSerial(port, config, dev, true)
+		conn.Start()
+	}
+
 	// datalogs directory
 	if *dataDir != "" {
 		rootConfig.Web.DataDir = *dataDir
@@ -141,7 +146,7 @@ func init() {
 func main() {
 	rbox, err := regenbox.NewRegenBox(conn, &rootConfig.Regenbox)
 	if err != nil {
-		log.Println("error initializing regenbox connection:", err)
+		log.Println("error scanning for RegenBox:", err)
 	}
 	if conn != nil {
 		_, err := rbox.TestConnection()
