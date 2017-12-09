@@ -170,8 +170,10 @@ struct chunk {
   }
 };
 
-#define AVG_CHUNK_SIZE   25
-#define AVG_TOTAL_CHUNKS 40
+// 10*5*20 = average on 1000ms
+#define POLL_RATE        10
+#define AVG_CHUNK_SIZE   5
+#define AVG_TOTAL_CHUNKS 20
 chunk* currentChunk = new chunk(AVG_CHUNK_SIZE);
 chunk* totalChunk = new chunk(AVG_TOTAL_CHUNKS);
 
@@ -218,13 +220,13 @@ void setup() {
 
   // insert a few ticks before starting
   tick();
-  delay(5);
+  delay(POLL_RATE);
   tick();
 }
 
 // main loop for arduino, keeps computing voltage (tick()) until Serial.available
 void loop() {
-  delay(1);
+  delay(POLL_RATE);
   if (!Serial.available()) {
     tick();
     return;
