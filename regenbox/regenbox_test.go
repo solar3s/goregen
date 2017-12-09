@@ -1,20 +1,31 @@
 package regenbox
 
 import (
+	"sync"
 	"testing"
 	"time"
 )
 
-func testAutoConnect(t *testing.T) *RegenBox {
-	rb, err := NewRegenBox(nil, nil)
+var rb *RegenBox
+var once sync.Once
+
+func testAutoConnect(tb testing.TB) *RegenBox {
+	if rb != nil {
+		return rb
+	}
+
+	var err error
+	rb, err = NewRegenBox(nil, nil)
 	if err != nil {
-		t.Skip(err)
+		tb.Skip(err)
 	}
 	return rb
 }
 
 func TestRegenBox_LedToggle(t *testing.T) {
 	rbx := testAutoConnect(t)
+	defer rbx.Stop()
+
 	t.Log("blinking led...")
 
 	b0, err := rbx.LedToggle()
@@ -34,4 +45,25 @@ func TestRegenBox_LedToggle(t *testing.T) {
 		b0 = b
 		time.Sleep(time.Millisecond * 500)
 	}
+}
+
+func BenchmarkReadVoltage(b *testing.B) {
+	rbx := testAutoConnect(b)
+	defer rbx.Stop()
+
+	once.Do(func() {
+		b.Logf("using firmware: %s", rbx.FirmwareVersion())
+	})
+
+	var total int
+	for n := 0; n < b.N; n++ {
+		i, err := rbx.ReadVoltage()
+		time.Sleep(time.Millisecond * 2)
+		if err != nil {
+			b.Error(b.N, err)
+		}
+		total += i
+	}
+	b.Logf("b.N: %d", b.N)
+	b.Logf("average voltage: %d", total/b.N)
 }
