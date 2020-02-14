@@ -63,7 +63,8 @@ You need to modify it using a text editor with appropriate values where needed, 
 for reloading configuration.
 
 ```
-Resistor = 10                   # The value of the resistor you're using in Ohms
+Resistor = "10.2"               # The value of the resistor you're using in Ohms
+# Device = "/dev/myRegenBox"    # By default goregen will try to detect your regenbox, no need to specify this (advanced use)
 
 [User]
   BetaId = ""                   # Beta ID as provided with your Regenbox
