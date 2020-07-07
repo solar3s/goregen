@@ -108,6 +108,7 @@ unsigned long getAnalog() {
 
 unsigned long getVoltage() {
   unsigned long tmp, sum;
+  sum = 0;
   for(byte i=0; i < NB_ANALOG_RD; i++){
     tmp = getAnalog();
     sum = sum + tmp;
