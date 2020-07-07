@@ -8,6 +8,8 @@
       https://github.com/solar3s/goregen/wiki/Upgrading-firmware
 -----------------------------------------------------------------------*/
 
+#define VERSION "v0"
+
 /*---------------------------------------------------------------------*
   Provides direct pin access via simple serial protocol
 
@@ -144,6 +146,9 @@ void loop() {
 
   byte in = Serial.read();
   switch (in) {
+    case READ_VERSION:
+      Serial.print(VERSION);
+      break;
     case READ_A0:
       Serial.print(getAnalog());
       break;
