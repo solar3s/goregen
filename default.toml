@@ -20,6 +20,10 @@ Resistor = 4.7
   BottomVoltage = 900
   Ticker = "60s"
   ChargeFirst = false
+  Battery1 = true
+  Battery2 = true
+  Battery3 = true
+  Battery4 = true
 
 [Web]
   ListenAddr = "localhost:3636"

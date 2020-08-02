@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"strconv"
 	"strings"
+	//    "log"
 )
 
 // This file contains (un)marshallers for various byte types
@@ -82,6 +83,7 @@ func (ch ChargeState) MarshalText() ([]byte, error) {
 func (ch *ChargeState) UnmarshalText(b []byte) error {
 	str := string(b)
 	idx := strings.Index(_ChargeState_name, str)
+	//log.Printf("idx cstate : %d",idx)
 	if idx < 0 {
 		i, err := strconv.Atoi(str)
 		if err == nil {
@@ -127,6 +129,7 @@ func (m BotMode) MarshalText() ([]byte, error) {
 func (m *BotMode) UnmarshalText(b []byte) error {
 	str := string(b)
 	idx := strings.Index(_BotMode_name, str)
+	//log.Printf("idx bot : %d",idx)
 	if idx < 0 {
 		i, err := strconv.Atoi(str)
 		if err == nil {

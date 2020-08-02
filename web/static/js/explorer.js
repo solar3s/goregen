@@ -22,7 +22,7 @@ function explorerChange(e) {
 function updateChart(data) {
 	var measures = data["Measures"];
 	var interval = ((Date.parse(measures["End"]) - Date.parse(measures["Start"])) / 1000) / measures.Data.length;
-	liveChart.init("#chart", measures.Data, false, interval);
+	liveChart.init("#chart", [measures.Data,data["Measures1"].Data,data["Measures2"].Data,data["Measures3"].Data], false, interval);
 
 	d3.selectAll('.cyType').html(data.CycleType);
 	d3.selectAll('.cyStatus').html(data.Reason);

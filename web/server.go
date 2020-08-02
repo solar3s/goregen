@@ -42,12 +42,19 @@ var DefaultServerConfig = ServerConfig{
 	WebsocketInterval: util.Duration(time.Second),
 }
 
+type LiveDatas struct {
+	LiveData1 util.TimeSeries
+	LiveData2 util.TimeSeries
+	LiveData3 util.TimeSeries
+	LiveData4 util.TimeSeries
+}
+
 type Server struct {
 	Config   *Config
 	Regenbox *regenbox.RegenBox
 
 	liveDataPath string
-	liveData     *util.TimeSeries
+	liveDatas    *LiveDatas
 	cfgPath      string
 	router       *mux.Router
 	wsUpgrader   *websocket.Upgrader
@@ -113,19 +120,31 @@ func StartServer(version string, rbox *regenbox.RegenBox, cfg *Config, cfgPath s
 	srv.liveDataPath = filepath.Join(filepath.Dir(srv.cfgPath), liveLog)
 
 	// load previous live data
-	err := util.ReadTomlFile(&srv.liveData, srv.liveDataPath)
+	err := util.ReadTomlFile(&srv.liveDatas, srv.liveDataPath)
 	if err != nil {
-		srv.liveData = util.NewTimeSeries(livePoints, liveInterval)
+		log.Println("data file parse error...")
+		srv.liveDatas = &LiveDatas{
+			LiveData1: *util.NewTimeSeries(livePoints, liveInterval),
+			LiveData2: *util.NewTimeSeries(livePoints, liveInterval),
+			LiveData3: *util.NewTimeSeries(livePoints, liveInterval),
+			LiveData4: *util.NewTimeSeries(livePoints, liveInterval),
+		}
 	} else {
 		// shift start time relative to now
-		srv.liveData.ResetStartTime()
+		srv.liveDatas.LiveData1.ResetStartTime()
+		srv.liveDatas.LiveData2.ResetStartTime()
+		srv.liveDatas.LiveData3.ResetStartTime()
+		srv.liveDatas.LiveData4.ResetStartTime()
 		// set max length, which is unexported
-		srv.liveData.SetMaxLength(livePoints)
+		srv.liveDatas.LiveData1.SetMaxLength(livePoints)
+		srv.liveDatas.LiveData2.SetMaxLength(livePoints)
+		srv.liveDatas.LiveData3.SetMaxLength(livePoints)
+		srv.liveDatas.LiveData4.SetMaxLength(livePoints)
 	}
 
 	// start voltage monitoring
 	go func() {
-		ticker := time.NewTicker(time.Duration(srv.liveData.Interval))
+		ticker := time.NewTicker(time.Duration(srv.liveDatas.LiveData1.Interval))
 		var sn regenbox.Snapshot
 		for range ticker.C {
 			sn = srv.Regenbox.Snapshot()
@@ -134,10 +153,13 @@ func StartServer(version string, rbox *regenbox.RegenBox, cfg *Config, cfgPath s
 			if sn.State != regenbox.Connected {
 				continue
 			}
-			srv.liveData.Add(sn.Voltage)
+			srv.liveDatas.LiveData1.Add(sn.Voltage1)
+			srv.liveDatas.LiveData2.Add(sn.Voltage2)
+			srv.liveDatas.LiveData3.Add(sn.Voltage3)
+			srv.liveDatas.LiveData4.Add(sn.Voltage4)
 
 			// save to file every 10ticks
-			err := util.WriteTomlFile(srv.liveData, srv.liveDataPath)
+			err := util.WriteTomlFile(srv.liveDatas, srv.liveDataPath)
 			if err != nil {
 				log.Println("couldn't save live datalog:", err)
 			}
@@ -220,7 +242,7 @@ func (s *Server) Websocket(w http.ResponseWriter, r *http.Request) {
 	go func(conn *websocket.Conn, s *Server) {
 		var err error
 		// subscribe to live ticker
-		liveId, liveCh := s.liveData.Subscribe()
+		liveId, liveCh := s.liveDatas.LiveData1.Subscribe()
 		// start state ticker
 		ticker := time.NewTicker(interval)
 		// subscribe to cycle ticker
@@ -230,21 +252,25 @@ func (s *Server) Websocket(w http.ResponseWriter, r *http.Request) {
 		s.cycleSubs[cycleId] = cycleCh
 		s.subId++
 		s.Unlock()
+		var sn = s.Regenbox.Snapshot()
 
 		data := struct {
 			Type string
 			Data interface{}
-		}{"state", s.Regenbox.Snapshot()}
+		}{"state", sn}
 		for {
 			// send regenbox state asap
 			err = conn.WriteJSON(data)
+
+			//log.Printf("chargestate : %s",sn.ChargeState)
+
 			if err != nil {
 				if s.Config.Web.verbose {
 					log.Printf("websocket - lost connection to %s", conn.RemoteAddr())
 				}
 				conn.Close()
 				ticker.Stop()
-				s.liveData.Unsubscribe(liveId)
+				s.liveDatas.LiveData1.Unsubscribe(liveId)
 				s.Lock()
 				delete(s.cycleSubs, cycleId)
 				s.Unlock()
@@ -256,6 +282,7 @@ func (s *Server) Websocket(w http.ResponseWriter, r *http.Request) {
 				// type: regenbox.Snapshot
 				data.Data = s.Regenbox.Snapshot()
 				data.Type = "state"
+
 			case x := <-liveCh:
 				// type: int
 				data.Data = x
@@ -296,6 +323,10 @@ func (s *Server) RegenboxConfigHandler(w http.ResponseWriter, r *http.Request) {
 		}
 		s.Config.Regenbox = cfg
 
+		if cfg.Mode == regenbox.ChargerX4 {
+			log.Printf("Charging batteries : #1:%t #2:%t #3:%t #4:%t", cfg.Battery1, cfg.Battery2, cfg.Battery3, cfg.Battery4)
+		}
+
 		if _, ok := r.URL.Query()["save"]; ok {
 			// save newly set config
 			err = util.WriteTomlFile(s.Config, s.cfgPath)
@@ -327,6 +358,9 @@ func (s *Server) StartRegenbox(w http.ResponseWriter, r *http.Request) {
 
 	go func(cfg Config) {
 		datalog := util.NewTimeSeries(0, cfg.Regenbox.Ticker)
+		datalog1 := util.NewTimeSeries(0, cfg.Regenbox.Ticker)
+		datalog2 := util.NewTimeSeries(0, cfg.Regenbox.Ticker)
+		datalog3 := util.NewTimeSeries(0, cfg.Regenbox.Ticker)
 
 		var sn regenbox.Snapshot
 		var msg regenbox.CycleMessage
@@ -337,7 +371,10 @@ func (s *Server) StartRegenbox(w http.ResponseWriter, r *http.Request) {
 					log.Println(sn)
 				}
 				// add to chart
-				datalog.Add(sn.Voltage)
+				datalog.Add(sn.Voltage1)
+				datalog1.Add(sn.Voltage2)
+				datalog2.Add(sn.Voltage3)
+				datalog3.Add(sn.Voltage4)
 			case msg = <-messages:
 				s.tplData.CycleMsg = &msg
 				if !msg.Final {
@@ -357,7 +394,6 @@ func (s *Server) StartRegenbox(w http.ResponseWriter, r *http.Request) {
 					}
 				}
 				s.Unlock()
-
 				if msg.Final == true {
 					if len(datalog.Data) == 0 {
 						log.Print("Charge log empty, nothing was saved.")
@@ -373,6 +409,9 @@ func (s *Server) StartRegenbox(w http.ResponseWriter, r *http.Request) {
 						Reason:        msg.Status,
 						Config:        cfg.Regenbox,
 						Measures:      *datalog,
+						Measures1:     *datalog1,
+						Measures2:     *datalog2,
+						Measures3:     *datalog3,
 					}
 					fname := filepath.Join(cfg.Web.DataDir, chart.FileName())
 					err := util.WriteTomlFile(chart, fname)
@@ -396,7 +435,14 @@ func (s *Server) StopRegenbox(w http.ResponseWriter, r *http.Request) {
 
 // LiveData encodes live measurement log as json to w.
 func (s *Server) LiveData(w http.ResponseWriter, r *http.Request) {
-	err := json.NewEncoder(w).Encode(s.liveData.Padded())
+	var lv = struct {
+		LiveData1 []int
+		LiveData2 []int
+		LiveData3 []int
+		LiveData4 []int
+	}{s.liveDatas.LiveData1.Padded(), s.liveDatas.LiveData2.Padded(), s.liveDatas.LiveData3.Padded(), s.liveDatas.LiveData4.Padded()}
+	err := json.NewEncoder(w).Encode(lv)
+
 	if err != nil {
 		log.Println(err)
 	}

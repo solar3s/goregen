@@ -18,6 +18,11 @@ var ErrUserStop = errors.New("Stopped by user")
 var ErrSnapshotSendTimeout = errors.New("Snapshot chan send timeout")
 var ErrFirmwareOutdated = errors.New("Firmware is probably out of date")
 
+var ErrBat1X4 = errors.New("Battery #1 fully charged...")
+var ErrBat2X4 = errors.New("Battery #2 fully charged...")
+var ErrBat3X4 = errors.New("Battery #3 fully charged...")
+var ErrBat4X4 = errors.New("Battery #4 fully charged...")
+
 //go:generate stringer -type=State,ChargeState,BotMode -output=types_string.go
 type State byte
 type ChargeState byte
@@ -27,6 +32,7 @@ const (
 	Idle        ChargeState = ChargeState(ModeIdle)
 	Charging    ChargeState = ChargeState(ModeCharge)
 	Discharging ChargeState = ChargeState(ModeDischarge)
+	ChargingX4  ChargeState = ChargeState(ModeChargeX4)
 )
 
 const (
@@ -42,11 +48,15 @@ const (
 	Charger    BotMode = BotMode(iota) // Charge until TopVoltage is reached, then idle
 	Discharger                         // Discharge until BottomVoltage is reached, then idle
 	Cycler                             // Do cycles up to NbCycles between Bottom & TopValues, then idle
+	ChargerX4
 )
 
 type Snapshot struct {
 	Time        time.Time
-	Voltage     int
+	Voltage1    int
+	Voltage2    int
+	Voltage3    int
+	Voltage4    int
 	ChargeState ChargeState
 	State       State
 	Firmware    string
@@ -61,6 +71,11 @@ type Config struct {
 	BottomVoltage int           // In auto-mode: target bottom voltage before switching charge-cycle
 	Ticker        util.Duration // In auto-mode: sleep interval in second between each measure
 	ChargeFirst   bool          // In auto-mode: start auto-run with a charge-cycle (false: discharge)
+
+	Battery1 bool // handle multi-batteries charging
+	Battery2 bool
+	Battery3 bool
+	Battery4 bool
 }
 
 type RegenBox struct {
@@ -87,6 +102,10 @@ var DefaultConfig = Config{
 	BottomVoltage: 900,
 	Ticker:        util.Duration(time.Second * 10),
 	ChargeFirst:   false,
+	Battery1:      true,
+	Battery2:      true,
+	Battery3:      true,
+	Battery4:      true,
 }
 
 func NewConfig() *Config {
@@ -152,6 +171,7 @@ func (rb *RegenBox) doCycle(tickerDuration util.Duration, maxDuration util.Durat
 		}
 
 		// repeat charge state, just in case (e.g. usb connect drop)
+		//log.Printf("ChargeMode doCycle : %s", rb.chargeState)
 		_ = rb.SetChargeMode(byte(rb.chargeState))
 
 		// send snapshot through the pipe
@@ -161,8 +181,23 @@ func (rb *RegenBox) doCycle(tickerDuration util.Duration, maxDuration util.Durat
 			return ErrSnapshotSendTimeout
 		}
 
-		if stopCond(sn.Voltage) {
-			return nil
+		if rb.chargeState == ChargingX4 {
+			if rb.config.Battery1 && stopCond(sn.Voltage1) {
+				return ErrBat1X4
+			}
+			if rb.config.Battery2 && stopCond(sn.Voltage2) {
+				return ErrBat2X4
+			}
+			if rb.config.Battery3 && stopCond(sn.Voltage3) {
+				return ErrBat3X4
+			}
+			if rb.config.Battery4 && stopCond(sn.Voltage4) {
+				return ErrBat4X4
+			}
+		} else {
+			if stopCond(sn.Voltage1) {
+				return nil
+			}
 		}
 	}
 }
@@ -200,6 +235,7 @@ func (rb *RegenBox) Start() (error, <-chan Snapshot, <-chan CycleMessage) {
 	}
 
 	var m CycleMessage
+	//log.Printf("Start mode: %s",rb.config.Mode)
 	switch rb.config.Mode {
 	case Charger:
 		err := rb.SetCharge()
@@ -214,6 +250,34 @@ func (rb *RegenBox) Start() (error, <-chan Snapshot, <-chan CycleMessage) {
 			err = rb.doCycle(rb.config.Ticker, rb.config.UpDuration, rb.topReached)
 			if err == nil {
 				m = chargeReached(rb.config.TopVoltage)
+			} else if err == ErrCycleTimeout {
+				m = chargeTimeout(rb.config.TopVoltage, rb.config.UpDuration)
+			} else {
+				m = chargeError(rb.config.TopVoltage, err)
+			}
+			rb.msgChan <- m
+		}()
+	case ChargerX4:
+		err := rb.SetChargeX4()
+		if err != nil {
+			return err, nil, nil
+		}
+
+		rb.msgChan <- chargeStartedX4(rb.config.TopVoltage)
+		rb.wg.Add(1)
+		go func() {
+			defer clean()
+			err = rb.doCycle(rb.config.Ticker, rb.config.UpDuration, rb.topReached)
+			if err == nil {
+				m = chargeReached(rb.config.TopVoltage)
+			} else if err == ErrBat1X4 {
+				m = chargeReachedX4(1, rb.config.TopVoltage)
+			} else if err == ErrBat2X4 {
+				m = chargeReachedX4(2, rb.config.TopVoltage)
+			} else if err == ErrBat3X4 {
+				m = chargeReachedX4(3, rb.config.TopVoltage)
+			} else if err == ErrBat4X4 {
+				m = chargeReachedX4(4, rb.config.TopVoltage)
 			} else if err == ErrCycleTimeout {
 				m = chargeTimeout(rb.config.TopVoltage, rb.config.UpDuration)
 			} else {
@@ -333,9 +397,34 @@ func (rb *RegenBox) Snapshot() Snapshot {
 		return s
 	}
 	var err error
-	s.Voltage, err = rb.ReadVoltage()
+
+	s.Voltage1, err = rb.ReadVoltage(ReadVoltage0)
+	//log.Printf("voltage 1 : %d",s.Voltage1);
 	if err != nil {
 		s.State = rb.state // update state, it should contain an error
+		s.ChargeState = rb.ChargeState()
+		return s
+	}
+	s.Voltage2, err = rb.ReadVoltage(ReadVoltage1)
+	//log.Printf("voltage 2 : %d",s.Voltage2);
+	if err != nil {
+		s.State = rb.state // update state, it should contain an error
+		s.ChargeState = rb.ChargeState()
+		return s
+	}
+	s.Voltage3, err = rb.ReadVoltage(ReadVoltage2)
+	//log.Printf("voltage 3 : %d",s.Voltage3);
+	if err != nil {
+		s.State = rb.state // update state, it should contain an error
+		s.ChargeState = rb.ChargeState()
+		return s
+	}
+	s.Voltage4, err = rb.ReadVoltage(ReadVoltage3)
+	//log.Printf("voltage 4 : %d",s.Voltage4);
+	if err != nil {
+		s.State = rb.state // update state, it should contain an error
+		s.ChargeState = rb.ChargeState()
+		return s
 	}
 	s.ChargeState = rb.ChargeState()
 	return s
@@ -347,6 +436,7 @@ func (rb *RegenBox) Config() Config {
 
 func (rb *RegenBox) SetConfig(cfg *Config) error {
 	rb.config = cfg
+	//log.Printf("setConf mode : %s",cfg.Mode)
 	return nil
 }
 
@@ -377,9 +467,9 @@ func (rb *RegenBox) ReadAnalog() (int, error) {
 }
 
 // ReadVoltage retreives voltage from battery on A0 in mV.
-func (rb *RegenBox) ReadVoltage() (int, error) {
+func (rb *RegenBox) ReadVoltage(pin byte) (int, error) {
 	rb.Lock()
-	res, err := rb.talk(ReadVoltage)
+	res, err := rb.talk(pin)
 	rb.Unlock()
 	if err != nil {
 		return -1, err
@@ -396,6 +486,10 @@ func (rb *RegenBox) FirmwareVersion() string {
 
 func (rb *RegenBox) SetCharge() error {
 	return rb.SetChargeMode(ModeCharge)
+}
+
+func (rb *RegenBox) SetChargeX4() error {
+	return rb.SetChargeMode(ModeChargeX4)
 }
 
 func (rb *RegenBox) SetDischarge() error {
@@ -419,9 +513,10 @@ func (rb *RegenBox) State() State {
 
 // SetChargeMode sends mode instruction to regenbox.
 // /!\ This works because values match between
-//    - ModeIdle/ModeCharge/ModeDischarge from protocol.go
-//    - Idle/Charging/Discharging ChargeState from regenbox.go
+//    - ModeIdle/ModeCharge/ModeDischarge/ModeChargeX4 from protocol.go
+//    - Idle/Charging/Discharging/ChargingX4 ChargeState from regenbox.go
 func (rb *RegenBox) SetChargeMode(mode byte) error {
+	//log.Printf("setChargeMode : %d",mode)
 	rb.Lock()
 	_, err := rb.talk(mode)
 	rb.Unlock()
@@ -430,6 +525,7 @@ func (rb *RegenBox) SetChargeMode(mode byte) error {
 	}
 	// no error, save state to box only now.
 	rb.chargeState = ChargeState(mode)
+	//log.Printf("ChargeMode : %s", rb.chargeState)
 	return nil
 }
 

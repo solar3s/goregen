@@ -25,8 +25,20 @@
 			<td class="v vChargeState">-</td>
 		</tr>
 		<tr>
-			<td>Tension:</td>
+			<td>Tension 1 (test):</td>
 			<td class="v vVoltage">-</td>
+		</tr>
+		<tr>
+			<td style="color:red">Tension 2:</td>
+			<td class="v vVoltage1">-</td>
+		</tr>
+		<tr>
+			<td style="color:green">Tension 3:</td>
+			<td class="v vVoltage2">-</td>
+		</tr>
+		<tr>
+			<td style="color:blue">Tension 4:</td>
+			<td class="v vVoltage3">-</td>
 		</tr>
 		<tr>
 			<td>WebSocket:</td>
@@ -53,10 +65,21 @@
 		</tr>
 	</table>
 	<section class="controls">
-		<button class="ctrl cUp cCharge" onclick="rbCharge();">Charge</button>
-		<button class="ctrl cUp cDischarge" onclick="rbDischarge();">Discharge</button>
-		<button class="ctrl cUp cCycle" onclick="rbCycle();">Multi-cycle</button>
-		<button class="ctrl cDown cStop" onclick="rbStop();">Stop</button>
+		<div class="controls_panel">
+			TEST-battery<br>
+			<button class="ctrl cUp cCharge" onclick="rbCharge();">Charge</button><br>
+			<button class="ctrl cUp cDischarge" onclick="rbDischarge();">Discharge</button><br>
+			<button class="ctrl cUp cCycle" onclick="rbCycle();">Multi-cycle</button>
+		</div>
+		<div class="controls_panel" style="border-left:1px black solid">
+			Multi-battery<br>
+			<input type="checkbox" class="ctrl cUp cBattery1" id="cBattery1"><label for="cBattery1" checked>Battery 1</label><br>
+			<input type="checkbox" class="ctrl cUp cBattery2" id="cBattery2"><label for="cBattery2" checked>Battery 2</label><br>
+			<input type="checkbox" class="ctrl cUp cBattery3" id="cBattery3"><label for="cBattery3" checked>Battery 3</label><br>
+			<input type="checkbox" class="ctrl cUp cBattery4" id="cBattery4"><label for="cBattery4" checked>Battery 4</label><br>
+			<button class="ctrl cUp cChargeX4" onclick="rbChargeX4();">Charge</button>
+		</div>
+		<button class="ctrl cDown cStop" onclick="rbStop();">Stop</button><br>
 	</section>
 	<hr>
 	<section class="config">

@@ -7,6 +7,7 @@ import (
 
 const (
 	CycleCharge    = "Charge"
+	CycleChargeX4  = "ChargeX4"
 	CycleDischarge = "Discharge"
 	CycleMulti     = "Multi-cycle"
 )
@@ -45,6 +46,10 @@ func chargeStarted(target int) CycleMessage {
 	return cycleStarted(CycleCharge, target)
 }
 
+func chargeStartedX4(target int) CycleMessage {
+	return cycleStarted(CycleChargeX4, target)
+}
+
 func dischargeStarted(target int) CycleMessage {
 	return cycleStarted(CycleDischarge, target)
 }
@@ -55,6 +60,10 @@ func multiCycleStarted(target int, t string, n int, of int) CycleMessage {
 
 func chargeReached(target int) CycleMessage {
 	return cycleReached(CycleCharge, target)
+}
+
+func chargeReachedX4(battery int, target int) CycleMessage {
+	return cycleMessage(CycleChargeX4, target, fmt.Sprintf("Target voltage reached for battery #%d...", battery), false, true)
 }
 
 func dischargeReached(target int) CycleMessage {

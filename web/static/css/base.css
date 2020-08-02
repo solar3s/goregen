@@ -151,6 +151,11 @@ table.overview td {
 
 .controls {
     margin: 10px 0 25px 15px;
+	text-align: center;
+}
+.controls button{
+	margin-bottom: 3px;
+	margin-top: 3px;
 }
 
 section.nav, section.content {
@@ -184,4 +189,16 @@ svg .line {
     fill: none;
     stroke: #000;
     stroke-width: 1px;
+}
+
+.controls_panel{
+	#border: 1px black solid;
+	text-align:center;
+	width: 144px;
+	display: table-cell;
+	margin: auto;
+	padding: 5px;
+}
+.controls_panel input{
+	margin: 5px;
 }

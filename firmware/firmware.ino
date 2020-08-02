@@ -7,6 +7,7 @@
 
       https://github.com/solar3s/goregen/wiki/Upgrading-firmware
 -----------------------------------------------------------------------*/
+#define VERSION         "v0.1"
 
 #define VERSION "v0"
 
@@ -32,6 +33,9 @@
 // READ_* writes string response
 #define READ_A0         0x00 // read A0 pin
 #define READ_V          0x01 // fancy A0 reads and compute voltage
+#define READ_V1         0x05 // fancy A1 reads and compute voltage
+#define READ_V2         0x06 // fancy A2 reads and compute voltage
+#define READ_V3         0x07 // fancy A3 reads and compute voltage
 #define READ_VERSION    0x02 // returns current firmware version
 
 // LED_TOGGLE writes boolean response (led state)
@@ -48,6 +52,7 @@
 #define MODE_IDLE       0x50 // enable idle mode
 #define MODE_CHARGE     0x51 // enable charge mode
 #define MODE_DISCHARGE  0x52 // enable discharge mode
+#define MODE_CHARGE_X4  0x53 // enable charge mode X4
 
 #define PING            0xA0 // just a ping
 
@@ -58,7 +63,10 @@
 #define PIN_CHARGE    4        // output pin address (charge)
 #define PIN_DISCHARGE 3        // output pin address (discharge)
 #define PIN_LED       13       // output pin address (arduino led)
-#define PIN_ANALOG    A0       // analog pin on battery-0 voltage
+#define PIN_ANALOG_0  A0       // analog pin on battery-0 voltage
+#define PIN_ANALOG_1  A1       // analog pin on battery-1 voltage
+#define PIN_ANALOG_2  A2       // analog pin on battery-2 voltage
+#define PIN_ANALOG_3  A3       // analog pin on battery-3 voltage
 
 // config parameters for getVoltage()
 #define CAN_REF       2410 // tension de reference du CAN
@@ -67,17 +75,33 @@
 
 // Averaging parameters
 #define VOLTAGE_HISTORY_NUM  10                  // Number of samples for averaging
-unsigned long gVoltageHist[VOLTAGE_HISTORY_NUM]; // Voltage history
-unsigned long gHistCounter = 0;                  // Voltage measurement counter
+unsigned long gVoltageHist[4][VOLTAGE_HISTORY_NUM]; // Voltage history
+unsigned long gHistCounter[] = {0,0,0,0};                  // Voltage measurement counter
 
 // computeAvgVoltage retreive the previous last
 // VOLTAGE_HISTORY_NUM measures and averages on that
-unsigned long computeAvgVoltage() {
+unsigned long computeAvgVoltage(byte pin) {
   unsigned long avgVoltage = 0;
-  byte sz = gHistCounter < VOLTAGE_HISTORY_NUM?
-    gHistCounter: VOLTAGE_HISTORY_NUM;
+  unsigned int index = 0;
+  byte sz;
+  switch(pin){
+    case PIN_ANALOG_0:
+      index = 0;
+      break;
+    case PIN_ANALOG_1:
+      index = 1;
+      break;
+    case PIN_ANALOG_2:
+      index = 2;
+      break;
+    case PIN_ANALOG_3:
+      index = 3;
+      break;
+  }
+  sz = gHistCounter[index] < VOLTAGE_HISTORY_NUM?
+    gHistCounter[index]: VOLTAGE_HISTORY_NUM;
   for (byte i = 0; i < sz; i++) {
-    avgVoltage += gVoltageHist[i];
+    avgVoltage += gVoltageHist[index][i];
   }
   avgVoltage = floor(avgVoltage / sz);
   return avgVoltage;
@@ -101,15 +125,16 @@ boolean toggleLed() {
   return b;
 }
 
-unsigned long getAnalog() {
-  return analogRead(PIN_ANALOG);
+unsigned long getAnalog(byte pin) {
+  return analogRead(pin);
 }
 
-unsigned long getVoltage() {
+unsigned long getVoltage(byte pin) {
   unsigned long tmp, sum;
+  unsigned int index = 0;
   sum = 0;
   for(byte i=0; i < NB_ANALOG_RD; i++){
-    tmp = getAnalog();
+    tmp = getAnalog(pin);
     sum = sum + tmp;
     delay(1);
   }
@@ -117,10 +142,25 @@ unsigned long getVoltage() {
   // convert using CAN specs and ref value
   sum = (sum * CAN_REF) / CAN_BITSIZE;
 
-  gVoltageHist[gHistCounter % VOLTAGE_HISTORY_NUM] = sum;
-  gHistCounter++;
+  switch(pin){
+    case PIN_ANALOG_0:
+      index = 0;
+      break;
+    case PIN_ANALOG_1:
+      index = 1;
+      break;
+    case PIN_ANALOG_2:
+      index = 2;
+      break;
+    case PIN_ANALOG_3:
+      index = 3;
+      break;
+  }
   
-  return computeAvgVoltage();
+  gVoltageHist[index][gHistCounter[index] % VOLTAGE_HISTORY_NUM] = sum;
+  gHistCounter[index]++;
+  
+  return computeAvgVoltage(pin);
 }
 
 void setup() {
@@ -150,12 +190,20 @@ void loop() {
       Serial.print(VERSION);
       break;
     case READ_A0:
-      Serial.print(getAnalog());
+      Serial.print(getAnalog(PIN_ANALOG_0));
       break;
     case READ_V:
-      Serial.print(getVoltage());
+      Serial.print(getVoltage(PIN_ANALOG_0));
       break;
-
+	case READ_V1:
+      Serial.print(getVoltage(PIN_ANALOG_1));
+      break;
+	case READ_V2:
+      Serial.print(getVoltage(PIN_ANALOG_2));
+      break;
+	case READ_V3:
+      Serial.print(getVoltage(PIN_ANALOG_3));
+      break;
     case LED_0:
       setLed(0);
       break;
@@ -185,7 +233,8 @@ void loop() {
       setCharge(0);
       break;
     case MODE_CHARGE:
-      setDischarge(0);
+	case MODE_CHARGE_X4:
+	  setDischarge(0);
       setCharge(1);
       break;
     case MODE_DISCHARGE:
