@@ -38,3 +38,13 @@
     50% {opacity: 0;}
     100% {opacity: 1;}
 }
+
+.grid line {
+  stroke: lightgrey;
+  stroke-opacity: 0.7;
+  shape-rendering: crispEdges;
+}
+
+.grid path {
+  stroke-width: 0;
+}

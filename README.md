@@ -5,7 +5,25 @@ For information about the __regenbox__ project or to pre-order hardware, go to h
 
 `goregen` is the web remote control interface for your `regenbox`
 
-![goregen](https://user-images.githubusercontent.com/1699009/28564780-684163c8-712a-11e7-80ae-c4ad9a9cc5ae.png)
+![goregen](https://chatmetaleux.be/multi_batteries_0.5.0.png)
+
+Version X4
+----------
+
+This version will work only for your regenbox if you wired it with the 4 batteries pins to the arduino.
+See more here : https://regenbox.slack.com/archives/C4V8L17D3/p1594030190006400
+
+The firmware has been updated to handle reading 4 voltages pins.
+
+The data logger will always log 4 voltages curves. So it can work for an official test if you only take the battery #1.
+
+Some variables names like vVoltage, vVoltage1, config.Battery1... need to be refactored for better understanding.
+
+Marshaller has been updated, but I'm not sure this will works well eveywhere.
+
+The cmd arg -assets won't work as the go-bindata util changed.
+
+TODO : Need to add code check to server.go to handle zero battery charging.
 
 Slack
 -----

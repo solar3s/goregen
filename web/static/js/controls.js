@@ -1,16 +1,49 @@
+function grayMultiVolatages(){
+	d3.selectAll('.vVoltage1').style('color', 'gray');
+	d3.selectAll('.vVoltage2').style('color', 'gray');
+	d3.selectAll('.vVoltage3').style('color', 'gray');
+}
+
 function rbCharge() {
+	grayMultiVolatages();
 	setConfig({
 		Mode: "Charger"
 	}, rbStart);
 }
 
+function rbChargeX4() {
+	// checks
+	let one=false;
+	if(d3.selectAll('.cBattery1').node().checked)one=true;
+	else if(d3.selectAll('.cBattery2').node().checked)one=true;
+	else if(d3.selectAll('.cBattery3').node().checked)one=true;
+	else if(d3.selectAll('.cBattery4').node().checked)one=true;
+	if(!one){
+		alert("Please select at least one battery");
+		return;
+	}
+	if(!d3.selectAll('.cBattery1').node().checked)d3.selectAll('.vVoltage').style('color', 'gray');
+	if(!d3.selectAll('.cBattery2').node().checked)d3.selectAll('.vVoltage1').style('color', 'gray');
+	if(!d3.selectAll('.cBattery3').node().checked)d3.selectAll('.vVoltage2').style('color', 'gray');
+	if(!d3.selectAll('.cBattery4').node().checked)d3.selectAll('.vVoltage3').style('color', 'gray');
+	setConfig({
+		Mode: "ChargerX4",
+		Battery1: d3.selectAll('.cBattery1').node().checked,
+		Battery2: d3.selectAll('.cBattery2').node().checked,
+		Battery3: d3.selectAll('.cBattery3').node().checked,
+		Battery4: d3.selectAll('.cBattery4').node().checked
+	}, rbStart);
+}
+
 function rbDischarge() {
+	grayMultiVolatages();
 	setConfig({
 		Mode: "Discharger"
 	}, rbStart);
 }
 
 function rbCycle() {
+	grayMultiVolatages();
 	setConfig({
 		Mode: "Cycler"
 	}, rbStart);

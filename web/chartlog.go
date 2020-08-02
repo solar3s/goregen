@@ -20,6 +20,9 @@ type ChartLog struct {
 	TotalDuration util.Duration
 	Config        regenbox.Config
 	Measures      util.TimeSeries
+	Measures1     util.TimeSeries
+	Measures2     util.TimeSeries
+	Measures3     util.TimeSeries
 }
 
 func (cl ChartLog) Info() ChartLogInfo {

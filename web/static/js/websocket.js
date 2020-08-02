@@ -33,6 +33,9 @@ stateSocket.start = function() {
 
 	var clearRegenboxState = function() {
 		d3.selectAll('.vVoltage').html('-');
+		d3.selectAll('.vVoltage1').html('-');
+		d3.selectAll('.vVoltage2').html('-');
+		d3.selectAll('.vVoltage3').html('-');
 		d3.selectAll('.vRawVoltage').html('');
 		d3.selectAll('.vChargeState').html('-');
 		d3.selectAll('.vFirmware').html('-');
@@ -50,6 +53,7 @@ stateSocket.start = function() {
 				}
 				return;
 			case "state":
+				//console.log(v.Data);
 				var state = v.Data['State'];
 				d3.selectAll('.vState').html(state);
 				if (state !== 'Connected') {
@@ -58,8 +62,11 @@ stateSocket.start = function() {
 				}
 
 				var charge = v.Data['ChargeState'];
-				d3.selectAll('.vVoltage').html(v.Data['Voltage'] + 'mV');
-				d3.selectAll('.vRawVoltage').html(v.Data['Voltage']);
+				d3.selectAll('.vVoltage').html(v.Data['Voltage1'] + 'mV');
+				d3.selectAll('.vVoltage1').html(v.Data['Voltage2'] + 'mV');
+				d3.selectAll('.vVoltage2').html(v.Data['Voltage3'] + 'mV');
+				d3.selectAll('.vVoltage3').html(v.Data['Voltage4'] + 'mV');
+				d3.selectAll('.vRawVoltage').html(v.Data['Voltage1']);
 				d3.selectAll('.vChargeState').html(charge);
 				d3.selectAll('.vFirmware').html(v.Data['Firmware']);
 				d3.selectAll('.ctrl.cUp').attr('disabled', charge !== 'Idle' ? '' : null);
@@ -69,15 +76,18 @@ stateSocket.start = function() {
 				var cy = v.Data;
 				if (cy['Final']) {
 					d3.selectAll('.cycleREC').classed('hidden', true);
+					d3.selectAll('.v').style('color', 'black');
 					clearInterval(runtime);
 					runtime = 0;
+					if(cy['Status']!="Stopped by user")
+						new Audio("/static/img/tada.mp3").play();
 				} else {
 					d3.selectAll('.cycleREC').classed('hidden', false);
 					if (runtime === 0) {
 						var start = Date.now();
 						runtime = setInterval(function () {
 							var delta = Date.now() - start;
-							d3.selectAll('.cyRuntime').html('' + Math.floor(delta / 1000) + ' sec');
+							d3.selectAll('.cyRuntime').html('' + duration2str(Math.floor(delta / 1000)));
 						}, 1000);
 					}
 				}
@@ -99,3 +109,12 @@ stateSocket.start = function() {
 		ws.onmessage = null;
 	}
 };
+
+function duration2str(sec){
+	if(sec>3600)
+		return moment.duration(sec, "seconds").format("h[ h ]m[ m ]s[ sec]");
+	if(sec>60)
+		return moment.duration(sec, "seconds").format("m[ m ]s[ sec]");
+	return moment.duration(sec, "seconds").format("s[ sec]");
+	
+}

@@ -40,7 +40,7 @@ func init() {
 	}
 
 	// restore static assets & exit
-	if *assetsPath != "" {
+	/*if *assetsPath != "" {
 		err := web.RestoreAssets(*assetsPath, "static")
 		if err != nil {
 			log.Fatalf("couldn't restore static assets in \"%s\": %s", *assetsPath, err)
@@ -50,7 +50,7 @@ func init() {
 			log.Println("use it as Web.StaticDir value in config to prioritize extracted static assets")
 			os.Exit(0)
 		}
-	}
+	}*/
 
 	// root directory for goregen
 	if *rootPath == "" {

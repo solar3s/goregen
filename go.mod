@@ -8,6 +8,7 @@ require (
 	github.com/gorilla/context v0.0.0-20160226214623-1ea25387ff6f // indirect
 	github.com/gorilla/mux v1.6.0
 	github.com/gorilla/websocket v1.2.0
+	github.com/jteeuwen/go-bindata v3.0.7+incompatible // indirect
 	github.com/rkjdid/errors v0.0.0-20170526093139-c9dd0c1e5fc1 // indirect
 	github.com/rkjdid/util v0.0.0-20171112122515-ba6a983d9160
 	go.bug.st/serial.v1 v0.0.0-20170728081230-eae1344f9f90

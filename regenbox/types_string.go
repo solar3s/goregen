@@ -2,7 +2,10 @@
 
 package regenbox
 
-import "fmt"
+import (
+	"fmt"
+	//"log"
+)
 
 const _State_name = "DisconnectedConnectedWriteErrorReadErrorUnexpectedErrorNilBox"
 
@@ -15,21 +18,26 @@ func (i State) String() string {
 	return _State_name[_State_index[i]:_State_index[i+1]]
 }
 
-const _ChargeState_name = "IdleChargingDischarging"
+const _ChargeState_name = "IdleChargingDischargingChargingX4"
 
-var _ChargeState_index = [...]uint8{0, 4, 12, 23}
+var _ChargeState_index = [...]uint8{0, 4, 12, 23, 33}
 
 func (i ChargeState) String() string {
-	i -= 80
+	//log.Printf("i = %d",i)
+	/*i -= 80
 	if i >= ChargeState(len(_ChargeState_index)-1) {
 		return fmt.Sprintf("ChargeState(%d)", i+80)
+	}
+	i += 80*/
+	if i >= 80 {
+		i -= 80
 	}
 	return _ChargeState_name[_ChargeState_index[i]:_ChargeState_index[i+1]]
 }
 
-const _BotMode_name = "ChargerDischargerCycler"
+const _BotMode_name = "ChargerDischargerCyclerChargerX4"
 
-var _BotMode_index = [...]uint8{0, 7, 17, 23}
+var _BotMode_index = [...]uint8{0, 7, 17, 23, 32}
 
 func (i BotMode) String() string {
 	if i >= BotMode(len(_BotMode_index)-1) {
