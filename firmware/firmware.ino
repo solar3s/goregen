@@ -7,6 +7,7 @@
 
       https://github.com/solar3s/goregen/wiki/Upgrading-firmware
 -----------------------------------------------------------------------*/
+#define VERSION         "v0.1"
 
 #define VERSION "v0"
 
@@ -36,7 +37,7 @@
 #define READ_V2         0x06 // fancy A2 reads and compute voltage
 #define READ_V3         0x07 // fancy A3 reads and compute voltage
 #define READ_VERSION    0x02 // returns current firmware version
-#define VERSION         "1.01"  // firmware version
+
 // LED_TOGGLE writes boolean response (led state)
 #define LED_TOGGLE      0x12 // led toggle
 
