@@ -203,9 +203,6 @@ void loop() {
 	case READ_V3:
       Serial.print(getVoltage(PIN_ANALOG_3));
       break;
-	case READ_VERSION:
-	  Serial.print(VERSION);
-      break;
     case LED_0:
       setLed(0);
       break;
