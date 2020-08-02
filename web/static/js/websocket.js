@@ -115,6 +115,6 @@ function duration2str(sec){
 		return moment.duration(sec, "seconds").format("h[ h ]m[ m ]s[ sec]");
 	if(sec>60)
 		return moment.duration(sec, "seconds").format("m[ m ]s[ sec]");
-	return sec+" sec");
+	return sec+" sec";
 	
 }
