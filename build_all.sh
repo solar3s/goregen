@@ -7,6 +7,7 @@ fi
 
 tmp=$(mktemp -d)
 version=$(cat version.go |grep Version |sed 's,.\+ "\([[:alnum:].]\+\)",\1,')
+mkdir -p builds/
 
 for os in "linux" "darwin" "windows"; do
   for arch in "amd64" "386" "arm"; do
