@@ -22,7 +22,8 @@ import (
 )
 
 const liveInterval = util.Duration(time.Second * 15)
-const livePoints = 2400
+const livePointsDefault = 2400
+const liveMinFrame = time.Hour * 4
 const liveLog = "data.log"
 
 type ServerConfig struct {
@@ -112,15 +113,28 @@ func StartServer(version string, rbox *regenbox.RegenBox, cfg *Config, cfgPath s
 
 	srv.liveDataPath = filepath.Join(filepath.Dir(srv.cfgPath), liveLog)
 
+	// load live interval config item
+	if time.Duration(srv.Config.Regenbox.Ticker) < time.Millisecond*100 {
+		log.Printf("provided ticker interval (%s) is below minimum (100ms), setting to default (%s)",
+			srv.Config.Regenbox.Ticker, liveInterval)
+		srv.Config.Regenbox.Ticker = liveInterval
+	}
+	livePoints := livePointsDefault
+	if time.Duration(srv.Config.Regenbox.Ticker)*time.Duration(livePoints) < liveMinFrame {
+		livePoints = int(liveMinFrame / time.Duration(srv.Config.Regenbox.Ticker))
+	}
+
 	// load previous live data
 	err := util.ReadTomlFile(&srv.liveData, srv.liveDataPath)
 	if err != nil {
-		srv.liveData = util.NewTimeSeries(livePoints, liveInterval)
+		srv.liveData = util.NewTimeSeries(livePoints, srv.Config.Regenbox.Ticker)
 	} else {
 		// shift start time relative to now
 		srv.liveData.ResetStartTime()
 		// set max length, which is unexported
 		srv.liveData.SetMaxLength(livePoints)
+		// reset ticker interval
+		srv.liveData.Interval = srv.Config.Regenbox.Ticker
 	}
 
 	// start voltage monitoring
