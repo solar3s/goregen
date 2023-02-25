@@ -14,5 +14,5 @@ github.com/rkjdid/util v0.0.0-20171112122515-ba6a983d9160 h1:sPL3Ex/05oEZLRk30Ef
 github.com/rkjdid/util v0.0.0-20171112122515-ba6a983d9160/go.mod h1:Xrv8r6C95LMx44T6XmIx+iZtJQt66w1Pf35s8nyYhB8=
 go.bug.st/serial.v1 v0.0.0-20170728081230-eae1344f9f90 h1:QVVy47wah4+TlNhOAqX52j42I+qY8eoyXQQA+CHaSM0=
 go.bug.st/serial.v1 v0.0.0-20170728081230-eae1344f9f90/go.mod h1:dRSl/CVCTf56CkXgJMDOdSwNfo2g1orOGE/gBGdvjZw=
-golang.org/x/sys v0.0.0-20171208153348-b8f5ef32195c h1:mVTDbwo5OFWVQw5K7fkzlFSiH55Db0+JDFjQSIEkNHk=
-golang.org/x/sys v0.0.0-20171208153348-b8f5ef32195c/go.mod h1:STP8DvDyc/dI5b8T5hshtkjS+E42TnysNCUPdjciGhY=
+golang.org/x/sys v0.1.0 h1:kunALQeHf1/185U1i0GOB/fy1IPRDDpuoOOqRReG57U=
+golang.org/x/sys v0.1.0/go.mod h1:oPkhp1MJrh7nUepCBck5+mAzfO9JrbApNNgaTdGDITg=

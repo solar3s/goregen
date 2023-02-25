@@ -11,5 +11,5 @@ require (
 	github.com/rkjdid/errors v0.0.0-20170526093139-c9dd0c1e5fc1 // indirect
 	github.com/rkjdid/util v0.0.0-20171112122515-ba6a983d9160
 	go.bug.st/serial.v1 v0.0.0-20170728081230-eae1344f9f90
-	golang.org/x/sys v0.0.0-20171208153348-b8f5ef32195c // indirect
+	golang.org/x/sys v0.1.0 // indirect
 )
